@@ -1,0 +1,109 @@
+{extend name="admin/layout/index" /}
+{block name="title"}学生管理{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">学生管理</h4>
+    <div>
+        <a class="btn btn-success" href="/admin/Student/import"><i class="bi bi-file-earmark-spreadsheet"></i> Excel导入</a>
+        <a class="btn btn-primary" href="/admin/Student/edit"><i class="bi bi-plus-lg"></i> 添加学生</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">班级</label>
+                <select name="class_id" class="form-select">
+                    <option value="">全部班级</option>
+                    {volist name="classes" id="c"}
+                    <option value="{$c.id}" {if $class_id==$c.id}selected{/if}>{$c.class_name}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">学号/姓名</label>
+                <input type="text" name="keyword" value="{$keyword}" class="form-control" placeholder="搜索学号或姓名">
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-primary"><i class="bi bi-search"></i> 搜索</button>
+                <a class="btn btn-outline-secondary" href="/admin/Student/index">重置</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="checkAll"></th>
+                    <th>ID</th>
+                    <th>学号</th>
+                    <th>姓名</th>
+                    <th>班级</th>
+                    <th>手机号</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="list" id="item"}
+                <tr>
+                    <td><input type="checkbox" class="row-check" value="{$item.id}"></td>
+                    <td>{$item.id}</td>
+                    <td>{$item.student_no}</td>
+                    <td>{$item.name}</td>
+                    <td>{$item.class_name|default='-'}</td>
+                    <td>{$item.phone|default='-'}</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="/admin/student/edit?id=<?php echo $item['id']; ?>"><i class="bi bi-pencil"></i></a>
+                        <a class="btn btn-sm btn-outline-danger" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {/volist}
+                {if $list->isEmpty()}
+                <tr><td colspan="7" class="text-center text-muted py-4">暂无数据</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <button class="btn btn-sm btn-danger" onclick="batchDel()"><i class="bi bi-trash"></i> 批量删除</button>
+            </div>
+            <div>{$list|raw}</div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script>
+function delItem(id){
+    if(!confirmAction('确认删除？')) return;
+    fetch('/admin/Student/delete', {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'id='+id
+    }).then(r=>r.json()).then(d=>{
+        showAlert(d.msg, d.code===1?'success':'danger');
+        if(d.code===1) setTimeout(function(){ location.reload(); },800);
+    });
+}
+function batchDel(){
+    var ids = Array.from(document.querySelectorAll('.row-check:checked')).map(c=>c.value);
+    if(!ids.length){ showAlert('请选择要删除的行','warning'); return; }
+    if(!confirmAction('确认删除选中的'+ids.length+'条？')) return;
+    var fd = new FormData();
+    ids.forEach(id=>fd.append('ids[]',id));
+    fetch('/admin/Student/batchDelete', {method:'POST', body:fd})
+        .then(r=>r.json()).then(d=>{
+            showAlert(d.msg, d.code===1?'success':'danger');
+            if(d.code===1) setTimeout(function(){ location.reload(); },800);
+        });
+}
+document.getElementById('checkAll').onchange = function(){
+    document.querySelectorAll('.row-check').forEach(c=>c.checked=this.checked);
+};
+</script>
+{/block}

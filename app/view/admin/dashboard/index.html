@@ -1,0 +1,78 @@
+{extend name="admin/layout/index" /}
+{block name="title"}数据概览{/block}
+{block name="content"}
+<h4 class="mb-4">数据概览</h4>
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card stat-card text-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">班级数量</div>
+                        <div class="display-6 fw-bold">{$stats.class_count}</div>
+                    </div>
+                    <i class="bi bi-building" style="font-size:48px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card text-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">学生总数</div>
+                        <div class="display-6 fw-bold">{$stats.student_count}</div>
+                    </div>
+                    <i class="bi bi-people" style="font-size:48px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card text-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">试题数量</div>
+                        <div class="display-6 fw-bold">{$stats.question_count}</div>
+                    </div>
+                    <i class="bi bi-book" style="font-size:48px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card text-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">抽题记录</div>
+                        <div class="display-6 fw-bold">{$stats.exam_record_count}</div>
+                    </div>
+                    <i class="bi bi-file-earmark-check" style="font-size:48px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-white border-0 pt-3">
+                <h6 class="mb-0"><i class="bi bi-lightbulb text-warning"></i> 快速操作</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-auto"><a class="btn btn-outline-primary" href="/admin/Student/import"><i class="bi bi-file-earmark-spreadsheet"></i> 导入学生名单</a></div>
+                    <div class="col-auto"><a class="btn btn-outline-success" href="/admin/Question/import"><i class="bi bi-file-earmark-spreadsheet"></i> 导入试题</a></div>
+                    <div class="col-auto"><a class="btn btn-outline-primary" href="/admin/draw"><i class="bi bi-dice-5"></i> 随机抽题</a></div>
+                    <div class="col-auto"><a class="btn btn-outline-warning" href="/admin/Group/index"><i class="bi bi-shuffle"></i> 随机分组</a></div>
+                    <div class="col-auto"><a class="btn btn-outline-secondary" href="/admin/clazz"><i class="bi bi-building"></i> 班级管理</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}

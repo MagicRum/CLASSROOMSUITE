@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>抽题系统</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/400.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/500.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/600.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.0.16/500.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.0.16/700.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/400.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/500.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/700.css" rel="stylesheet">
+<style>
+    body {
+        min-height: 100vh;
+        display: flex; align-items: center;
+        font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: rgba(255,255,255,.9);
+        background: #101013;
+    }
+    /* 背景：极光柔光 + 胶片噪点 */
+    body::before {
+        content: ''; position: fixed; inset: 0;
+        pointer-events: none; z-index: 0;
+        background-image:
+            radial-gradient(50% 38% at 85% -5%, rgba(168,85,247,.15), transparent 70%),
+            radial-gradient(45% 45% at -5% 105%, rgba(124,58,237,.12), transparent 70%),
+            radial-gradient(30% 30% at 12% 22%, rgba(59,130,246,.05), transparent 70%);
+    }
+    body::after {
+        content: ''; position: fixed; inset: 0;
+        pointer-events: none; z-index: 0; opacity: .55;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.04'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .container { position: relative; z-index: 1; }
+
+    .choice-card {
+        max-width: 680px; margin: auto;
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 12px;
+        background: #17171B;
+        box-shadow: 0 16px 48px rgba(0,0,0,.4);
+        animation: cardIn .5s ease both;
+    }
+    @keyframes cardIn {
+        0% { opacity: 0; transform: translateY(16px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .home-logo {
+        font-family: "Space Grotesk", "Inter", sans-serif;
+        font-size: 46px; font-weight: 700; letter-spacing: 8px;
+        color: #fff; line-height: 1; margin: 0 auto;
+    }
+    .home-logo em { color: #A855F7; font-style: normal; }
+    .big-btn {
+        padding: 36px 24px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,.14);
+        background: #1D1D22;
+        color: #fff;
+        transition: border-color .2s ease, background .2s ease;
+    }
+    .big-btn:hover { border-color: #A855F7; background: #222227; color: #fff; }
+    .big-btn i { color: rgba(255,255,255,.5); transition: color .2s ease; }
+    .big-btn:hover i { color: #C084FC; }
+    .big-btn h4 { color: #fff; font-weight: 700; letter-spacing: 2px; }
+    .big-btn small { color: rgba(255,255,255,.45); }
+
+    .producer-footer {
+        text-align: center; margin-top: 32px;
+        animation: cardIn .5s ease .15s both;
+    }
+    .producer-label {
+        font-size: 10px; font-weight: 600; letter-spacing: 2px;
+        color: rgba(255,255,255,.3); text-transform: uppercase;
+    }
+    .producer-name {
+        font-size: 13px; font-weight: 500; letter-spacing: 1px;
+        color: rgba(255,255,255,.6); margin-top: 2px;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="card choice-card">
+        <div class="card-body p-5 text-center">
+            <div class="home-logo">QTS<em>.</em></div>
+            <h2 class="mt-3" style="color:#fff;font-weight:700;letter-spacing:4px;">抽题系统</h2>
+            <p style="color:rgba(255,255,255,.5);margin-bottom:40px;">随机抽题 · 随机分组 · 课堂互动</p>
+
+            <div class="row g-4 justify-content-center">
+                <div class="col-md-8">
+                    <a href="/admin/Login/index" class="btn big-btn d-block">
+                        <i class="bi bi-arrow-right-circle" style="font-size:34px;"></i>
+                        <div class="fs-4 mt-2 fw-bold" style="letter-spacing:2px;">教师入口</div>
+                        <div class="small mt-1">导入名单 · 导入试题 · 随机抽题 · 随机分组</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="producer-footer">
+        <div class="producer-label">制作人</div>
+        <div class="producer-name">软件工程教研室 李嘉哲</div>
+    </div>
+</div>
+</body>
+</html>

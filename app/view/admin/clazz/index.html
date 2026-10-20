@@ -1,0 +1,87 @@
+{extend name="admin/layout/index" /}
+{block name="title"}班级管理{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">班级管理</h4>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form id="clazzForm" class="row g-2 align-items-end">
+            <input type="hidden" name="id" id="clazzId" value="0">
+            <div class="col-md-4">
+                <label class="form-label small">班级名称</label>
+                <input type="text" name="class_name" id="clazzName" class="form-control" placeholder="如 软件2201班" required>
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> <span id="submitText">添加班级</span></button>
+                <button type="button" class="btn btn-outline-secondary" id="cancelEdit" style="display:none;" onclick="resetForm()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th width="60">ID</th>
+                    <th>班级名称</th>
+                    <th width="100">学生数</th>
+                    <th width="140">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="list" id="item"}
+                <tr>
+                    <td>{$item.id}</td>
+                    <td>{$item.class_name}</td>
+                    <td><span class="badge bg-primary">{$item.student_count}人</span></td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" onclick="editItem({$item.id}, '{$item.class_name}')"><i class="bi bi-pencil"></i></a>
+                        <a class="btn btn-sm btn-outline-danger" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {/volist}
+                {if $list->isEmpty()}
+                <tr><td colspan="4" class="text-center text-muted py-4">暂无班级，可在上方添加或通过导入学生名单自动创建</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script>
+document.getElementById('clazzForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var fd = new FormData(this);
+    fetch('/admin/clazz/save', {method:'POST', body:fd})
+        .then(function(r){ return r.json(); }).then(function(d){
+            showAlert(d.msg, d.code===1 ? 'success' : 'danger');
+            if(d.code===1) setTimeout(function(){ location.reload(); }, 800);
+        });
+});
+function editItem(id, name){
+    document.getElementById('clazzId').value = id;
+    document.getElementById('clazzName').value = name;
+    document.getElementById('submitText').textContent = '保存修改';
+    document.getElementById('cancelEdit').style.display = '';
+}
+function resetForm(){
+    document.getElementById('clazzId').value = 0;
+    document.getElementById('clazzName').value = '';
+    document.getElementById('submitText').textContent = '添加班级';
+    document.getElementById('cancelEdit').style.display = 'none';
+}
+function delItem(id){
+    if(!confirmAction('确认删除该班级？')) return;
+    fetch('/admin/clazz/delete', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'id='+id})
+        .then(function(r){ return r.json(); }).then(function(d){
+            showAlert(d.msg, d.code===1 ? 'success' : 'danger');
+            if(d.code===1) setTimeout(function(){ location.reload(); }, 800);
+        });
+}
+</script>
+{/block}

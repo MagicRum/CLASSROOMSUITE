@@ -1,0 +1,124 @@
+{extend name="admin/layout/index" /}
+{block name="title"}分组管理{/block}
+{block name="content"}
+<h4 class="mb-3">分组管理</h4>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">选择班级</label>
+                <select name="class_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">-- 请先选择班级 --</option>
+                    {volist name="classes" id="c"}
+                    <option value="{$c.id}" {if $class_id==$c.id}selected{/if}>{$c.class_name}</option>
+                    {/volist}
+                </select>
+            </div>
+            {if $class_id}
+            <div class="col-md-3">
+                <a class="btn btn-success" href="/admin/group/export?class_id=<?php echo $class_id; ?>"><i class="bi bi-download"></i> 导出分组Excel</a>
+            </div>
+            {/if}
+        </form>
+    </div>
+</div>
+
+{if $class_id}
+<div class="card mb-3 border-warning">
+    <div class="card-header bg-warning text-dark"><strong><i class="bi bi-shuffle"></i> 随机分组</strong></div>
+    <div class="card-body">
+        <form id="randomForm" class="row g-2 align-items-end">
+            <input type="hidden" name="class_id" value="{$class_id}">
+            <div class="col-md-3">
+                <label class="form-label small">方式</label>
+                <select id="modeSel" class="form-select" onchange="toggleMode()">
+                    <option value="group_count">按组数</option>
+                    <option value="group_size">按每组人数</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small" id="numLabel">组数</label>
+                <input type="number" name="group_count" id="numInput" class="form-control" min="1" value="5">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-warning"><i class="bi bi-shuffle"></i> 立即随机分组</button>
+            </div>
+            <div class="col-12 text-danger small">
+                注意：执行后会<strong>清空该班级原有分组</strong>，学生将被重新随机分配
+            </div>
+        </form>
+    </div>
+</div>
+
+{if $groups}
+<div class="row g-3">
+    {volist name="groups" id="g" key="k"}
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <strong><span class="badge bg-light text-primary me-2" style="min-width:28px;">{$k}</span>{$g.group_name}</strong>
+                <span class="badge bg-light text-primary">{$g.student_count}人</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {volist name="g.students" id="s" key="no"}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><span class="badge bg-primary rounded-pill me-2" style="min-width:26px;">{$no}</span>{$s.student_no} - {$s.name}</span>
+                    </li>
+                    {/volist}
+                    {if $g.student_count == 0}
+                    <li class="list-group-item text-muted text-center">暂无学生</li>
+                    {/if}
+                </ul>
+            </div>
+            <div class="card-footer text-end bg-white border-0">
+                <a class="btn btn-sm btn-outline-danger" onclick="delGroup({$g.id})"><i class="bi bi-trash"></i> 解散</a>
+            </div>
+        </div>
+    </div>
+    {/volist}
+</div>
+{else}
+<div class="card text-center py-5">
+    <i class="bi bi-diagram-3 text-muted" style="font-size:48px;"></i>
+    <p class="mt-2 text-muted">该班级暂无分组，请在上方进行随机分组</p>
+</div>
+{/if}
+{/if}
+{/block}
+{block name="js"}
+<script>
+function toggleMode(){
+    var mode = document.getElementById('modeSel').value;
+    var label = document.getElementById('numLabel');
+    var input = document.getElementById('numInput');
+    input.removeAttribute('name');
+    if(mode==='group_count'){
+        label.textContent='组数';
+        input.name='group_count'; input.value='5'; input.placeholder='如 5';
+    } else {
+        label.textContent='每组人数';
+        input.name='group_size'; input.value='6'; input.placeholder='如 6';
+    }
+}
+document.getElementById('randomForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    if(!confirmAction('确认重新随机分组？会清空原有分组！')) return;
+    var fd = new FormData(this);
+    fetch('/admin/Group/random',{method:'POST',body:fd})
+        .then(r=>r.json()).then(d=>{
+            showAlert(d.msg,d.code===1?'success':'danger');
+            if(d.code===1) setTimeout(function(){location.reload();},800);
+        });
+});
+function delGroup(id){
+    if(!confirmAction('确认解散该分组？组内学生将回到未分组状态')) return;
+    fetch('/admin/Group/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id})
+        .then(r=>r.json()).then(d=>{
+            showAlert(d.msg,d.code===1?'success':'danger');
+            if(d.code===1) setTimeout(function(){location.reload();},800);
+        });
+}
+</script>
+{/block}

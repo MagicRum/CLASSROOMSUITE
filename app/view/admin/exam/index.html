@@ -1,0 +1,70 @@
+{extend name="admin/layout/index" /}
+{block name="title"}抽题记录{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">抽题记录</h4>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">学号/姓名</label>
+                <input type="text" name="keyword" value="{$keyword}" class="form-control">
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-primary">搜索</button>
+                <a class="btn btn-outline-secondary" href="/admin/Exam/index">重置</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th width="50">ID</th>
+                    <th>学号</th>
+                    <th>姓名</th>
+                    <th>抽题数量</th>
+                    <th>抽题时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="list" id="item"}
+                <tr>
+                    <td>{$item.id}</td>
+                    <td>{$item.s_student_no ?: $item.student_no}</td>
+                    <td>{$item.name|default='-'}</td>
+                    <td>{$item.question_ids|count}</td>
+                    <td>{$item.draw_time}</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-info" href="/admin/exam/detail?id=<?php echo $item['id']; ?>">详情</a>
+                        <a class="btn btn-sm btn-outline-danger" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+                {/volist}
+                {if $list->isEmpty()}
+                <tr><td colspan="6" class="text-center text-muted py-4">暂无记录</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-white">{$list|raw}</div>
+</div>
+{/block}
+{block name="js"}
+<script>
+function delItem(id){
+    if(!confirmAction('确认删除？')) return;
+    fetch('/admin/Exam/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id})
+        .then(r=>r.json()).then(d=>{
+            showAlert(d.msg,d.code===1?'success':'danger');
+            if(d.code===1) setTimeout(function(){location.reload();},800);
+        });
+}
+</script>
+{/block}

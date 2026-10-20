@@ -1,0 +1,12 @@
+#!/usr/bin/env php
+<?php
+// ThinkPHP 6 CLI 入口 - 服务器上用来清缓存、查看路由等
+// 用法：php think route:list  或  php think clear
+
+require __DIR__ . '/vendor/autoload.php';
+
+$app = new \think\App();
+$app->initialize();
+
+$console = $app->console;
+$console->run()->send();

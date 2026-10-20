@@ -1,0 +1,64 @@
+﻿{extend name="admin/layout/index" /}
+{block name="title"}导入学生名单{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Excel 导入学生名单</h4>
+    <a class="btn btn-outline-secondary" href="/admin/Student/index">返回列表</a>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><strong>上传 Excel 文件</strong></div>
+            <div class="card-body">
+                <form id="importForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">选择 Excel / CSV 文件</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                    </div>
+                    <div class="text-muted small mb-3">
+                        导入规则：<br>
+                        - 学号已存在时，更新该学生信息；不存在则新增<br>
+                        - 班级名称不存在时自动创建
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> 开始导入</button>
+                </form>
+                <div id="importResult" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><strong>Excel 模板</strong></div>
+            <div class="card-body">
+                <p class="text-muted">Excel 列顺序固定为：</p>
+                <table class="table table-sm table-bordered">
+                    <tr><th>A列</th><th>B列</th><th>C列</th><th>D列</th></tr>
+                    <tr><td>学号</td><td>姓名</td><td>班级名称</td><td>手机号（可选）</td></tr>
+                    <tr><td>2024001</td><td>张三</td><td>计算机1班</td><td>138xxxx</td></tr>
+                </table>
+                <a class="btn btn-success" href="/admin/Student/template"><i class="bi bi-download"></i> 下载导入模板</a>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script>
+document.getElementById('importForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var fd = new FormData(this);
+    fetch('/admin/Student/import', {method:'POST', body:fd})
+        .then(r=>r.json()).then(d=>{
+            showAlert(d.msg, d.code===1?'success':'danger');
+            if(d.data && d.data.errors){
+                var html = '<div class="mt-3"><strong>错误示例：</strong><ul class="small text-danger">';
+                d.data.errors.forEach(function(err){ html += '<li>'+err+'</li>'; });
+                html += '</ul></div>';
+                document.getElementById('importResult').innerHTML = html;
+            }
+            if(d.code===1) setTimeout(function(){ location.reload(); },1500);
+        });
+});
+</script>
+{/block}

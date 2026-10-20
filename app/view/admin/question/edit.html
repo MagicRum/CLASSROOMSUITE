@@ -1,0 +1,107 @@
+{extend name="admin/layout/index" /}
+{block name="title"}{if $question}编辑试题{else}添加试题{/if}{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">{if $question}编辑试题{else}添加试题{/if}</h4>
+    <a class="btn btn-outline-secondary" href="/admin/Question/index">返回列表</a>
+</div>
+<div class="card col-md-8">
+    <div class="card-body">
+        <form id="questionForm">
+            <input type="hidden" name="id" value="{$question.id|default=0}">
+            <div class="mb-3">
+                <label class="form-label">题目内容 *</label>
+                <textarea name="title" class="form-control" rows="3" required>{$question.title|default=''}</textarea>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">题型</label>
+                    <select name="question_type" id="typeSel" class="form-select" onchange="toggleType()">
+                        {volist name="typeMap" id="v" key="k"}
+                        <option value="{$k}" {if !$question && $k==1}selected{/if} {if isset($question.question_type) && $question.question_type==$k}selected{/if}>{$v}</option>
+                        {/volist}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">难度</label>
+                    <select name="difficulty" class="form-select">
+                        {volist name="difficultyMap" id="v" key="k"}
+                        <option value="{$k}" {if !$question && $k==2}selected{/if} {if isset($question.difficulty) && $question.difficulty==$k}selected{/if}>{$v}</option>
+                        {/volist}
+                    </select>
+                </div>
+            </div>
+            <div class="row g-3 mt-2" id="optionsRow">
+                <div class="col-md-6">
+                    <label class="form-label">选项A</label>
+                    <input type="text" name="option_a" class="form-control" value="{$question.option_a|default=''}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">选项B</label>
+                    <input type="text" name="option_b" class="form-control" value="{$question.option_b|default=''}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">选项C</label>
+                    <input type="text" name="option_c" class="form-control" value="{$question.option_c|default=''}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">选项D</label>
+                    <input type="text" name="option_d" class="form-control" value="{$question.option_d|default=''}">
+                </div>
+            </div>
+            <div class="row g-3 mt-2">
+                <div class="col-md-8">
+                    <label class="form-label" id="answerLabel">正确答案 *</label>
+                    <textarea name="correct_answer" id="answerInput" class="form-control" rows="1" placeholder="如 A 或 BCD" required>{$question.correct_answer|default=''}</textarea>
+                    <div class="form-text" id="answerHint">单选/多选：填字母；判断：填 A(对) 或 B(错)；填空：填答案文本</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">分类</label>
+                    <input type="text" name="category" class="form-control" value="{$question.category|default=''}" placeholder="如 PHP基础">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">保存</button>
+        </form>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script>
+function toggleType(){
+    var t = document.getElementById('typeSel').value;
+    var optionsRow = document.getElementById('optionsRow');
+    var answerLabel = document.getElementById('answerLabel');
+    var answerInput = document.getElementById('answerInput');
+    var answerHint = document.getElementById('answerHint');
+    if (t === '5') {
+        // 简答题：无选项，参考答案可选
+        optionsRow.style.display = 'none';
+        answerLabel.textContent = '参考答案（可选）';
+        answerInput.rows = 3;
+        answerInput.required = false;
+        answerInput.placeholder = '面试评分参考要点，可留空';
+        answerHint.textContent = '简答题用于面试抽题，抽题页面不会显示此内容';
+    } else {
+        optionsRow.style.display = '';
+        answerLabel.textContent = '正确答案 *';
+        answerInput.rows = 1;
+        answerInput.required = true;
+        answerInput.placeholder = '如 A 或 BCD';
+        answerHint.textContent = '单选/多选：填字母；判断：填 A(对) 或 B(错)；填空：填答案文本';
+    }
+    // 判断题无需填选项
+    if (t === '3') optionsRow.style.display = 'none';
+}
+toggleType();
+
+document.getElementById('questionForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var fd = new FormData(this);
+    fetch('/admin/Question/save',{method:'POST',body:fd})
+        .then(r=>r.json()).then(d=>{
+            showAlert(d.msg,d.code===1?'success':'danger');
+            if(d.code===1 && d.url) setTimeout(function(){location.href=d.url;},800);
+        });
+});
+</script>
+{/block}

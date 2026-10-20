@@ -1,0 +1,14 @@
+# 运行时数据（含 SQLite 数据库，绝不提交）
+/runtime/
+
+# 本地便携 PHP 环境（服务器用不到）
+/tools/
+
+# 环境配置
+.env
+
+# 系统/编辑器杂项
+Thumbs.db
+.DS_Store
+*.log
+*.zip

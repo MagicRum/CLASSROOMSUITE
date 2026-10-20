@@ -1,0 +1,48 @@
+{extend name="admin/layout/index" /}
+{block name="title"}抽题记录详情{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">抽题记录详情</h4>
+    <a class="btn btn-outline-secondary" href="/admin/Exam/index">返回列表</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3"><strong>学号：</strong>{$record.student_no}</div>
+            <div class="col-md-3"><strong>姓名：</strong>{$student.name|default='-'}</div>
+            <div class="col-md-3"><strong>抽题时间：</strong>{$record.draw_time}</div>
+        </div>
+    </div>
+</div>
+
+<h5 class="mb-3"><i class="bi bi-list-ol"></i> 抽中的题目（共 {$questions|count} 道）</h5>
+
+{volist name="questions" id="q" key="k"}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <strong>第{$k}题</strong>
+        <span class="badge bg-info">{$typeMap[$q.question_type]}</span>
+    </div>
+    <div class="card-body">
+        <p class="mb-3">{$q.title}</p>
+        {if $q.question_type != 4}
+        <div class="row g-2 mb-3">
+            {if $q.question_type == 3}
+                <div class="col-auto"><strong>A.</strong> 对</div>
+                <div class="col-auto"><strong>B.</strong> 错</div>
+            {else}
+                {notempty name="q.option_a"}<div class="col-12"><strong>A.</strong> {$q.option_a}</div>{/notempty}
+                {notempty name="q.option_b"}<div class="col-12"><strong>B.</strong> {$q.option_b}</div>{/notempty}
+                {notempty name="q.option_c"}<div class="col-12"><strong>C.</strong> {$q.option_c}</div>{/notempty}
+                {notempty name="q.option_d"}<div class="col-12"><strong>D.</strong> {$q.option_d}</div>{/notempty}
+            {/if}
+        </div>
+        {/if}
+        <div class="bg-success bg-opacity-10 p-2 rounded small">
+            <strong>正确答案：</strong><span class="text-success fw-bold">{$q.correct_answer}</span>
+        </div>
+    </div>
+</div>
+{/volist}
+{/block}
