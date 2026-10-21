@@ -73,12 +73,13 @@
 
 <div class="card">
     <div class="card-body p-0">
+        <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">
             <thead>
                 <tr>
                     <th width="70">ID</th>
                     <th width="150">学生</th>
-                    <th>题目</th>
+                    <th style="min-width:180px;">题目</th>
                     <th width="110">语言</th>
                     <th width="110">状态</th>
                     <th width="80">得分</th>
@@ -120,6 +121,7 @@
                 {/if}
             </tbody>
         </table>
+        </div>
     </div>
     {if $list->total() > 0}
     <div class="card-footer d-flex justify-content-between align-items-center">

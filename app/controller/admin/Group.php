@@ -103,7 +103,8 @@ class Group extends Base
      */
     public function delete()
     {
-        $id = input('id', 0);
+        if ($resp = $this->requirePost()) return $resp;
+        $id = input('post.id', 0);
         if (!$id) return $this->error('参数错误');
         GroupModel::where('id', $id)->delete();
         Student::where('group_id', $id)->update(['group_id' => 0]);

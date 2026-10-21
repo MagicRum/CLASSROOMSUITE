@@ -111,6 +111,11 @@ class OjProblem extends Base
                 'score_mode'      => 'case',
                 'ignore_trailing' => 1,
                 'show_detail'     => 0,
+                'ref_language'    => '',
+                'ref_code'        => '',
+                'gen_language'    => '',
+                'gen_code'        => '',
+                'random_cases'    => 0,
                 'is_public'       => 1,
                 'sort'            => 0,
             ];
@@ -161,6 +166,22 @@ class OjProblem extends Base
             $scoreMode = 'case';
         }
 
+        $refLang = (string) input('post.ref_language', '');
+        if (!in_array($refLang, $supported, true)) {
+            $refLang = '';
+        }
+        $genLang = (string) input('post.gen_language', '');
+        if (!in_array($genLang, $supported, true)) {
+            $genLang = '';
+        }
+        $refCode = isset($_POST['ref_code']) ? mb_substr((string) $_POST['ref_code'], 0, 100000, 'UTF-8') : '';
+        $genCode = isset($_POST['gen_code']) ? mb_substr((string) $_POST['gen_code'], 0, 100000, 'UTF-8') : '';
+        $randomCases = max(0, min(20, intval(input('post.random_cases', 0))));
+        // 参考程序、生成器或组数缺失时自动关闭随机对拍
+        if ($refLang === '' || $genLang === '' || trim($refCode) === '' || trim($genCode) === '' || $randomCases < 1) {
+            $randomCases = 0;
+        }
+
         $data = [
             'category_id'     => intval(input('post.category_id', 0)),
             'title'           => $title,
@@ -179,6 +200,11 @@ class OjProblem extends Base
             'score_mode'      => $scoreMode,
             'ignore_trailing' => intval(input('post.ignore_trailing', 0)) ? 1 : 0,
             'show_detail'     => intval(input('post.show_detail', 0)) ? 1 : 0,
+            'ref_language'    => $refLang,
+            'ref_code'        => $refCode,
+            'gen_language'    => $genLang,
+            'gen_code'        => $genCode,
+            'random_cases'    => $randomCases,
             'is_public'       => intval(input('post.is_public', 1)) ? 1 : 0,
             'sort'            => intval(input('post.sort', 0)),
             'update_time'     => date('Y-m-d H:i:s'),

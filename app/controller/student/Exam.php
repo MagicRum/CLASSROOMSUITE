@@ -21,7 +21,7 @@ class Exam
 
         return view('student/draw/index', [
             'poolCount' => count($pool),
-            'poolJson'  => json_encode($pool, JSON_UNESCAPED_UNICODE),
+            'poolJson'  => json_encode($pool, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
         ]);
     }
 

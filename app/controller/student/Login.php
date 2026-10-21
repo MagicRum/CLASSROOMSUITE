@@ -11,10 +11,12 @@ class Login
 {
     public function index()
     {
+        $from = input('get.from', '');
+        $from = $from === 'oj' ? 'oj' : '';
         if (!empty($_SESSION['student_id'])) {
-            return redirect('/student/draw');
+            return redirect($from === 'oj' ? '/oj' : '/student/draw');
         }
-        return view('student/login/index');
+        return view('student/login/index', ['from' => $from]);
     }
 
     /**
@@ -24,6 +26,7 @@ class Login
     {
         $studentNo = trim((string) input('post.student_no', ''));
         $password  = (string) input('post.password', '');
+        $from      = input('post.from', '') === 'oj' ? 'oj' : '';
 
         if (!$studentNo || $password === '') {
             return json(['code' => 0, 'msg' => '学号和密码不能为空']);
@@ -48,7 +51,7 @@ class Login
             'class_id'   => $student->class_id,
         ];
 
-        return json(['code' => 1, 'msg' => '登录成功', 'url' => '/student/draw']);
+        return json(['code' => 1, 'msg' => '登录成功', 'url' => $from === 'oj' ? '/oj' : '/student/draw']);
     }
 
     public function logout()

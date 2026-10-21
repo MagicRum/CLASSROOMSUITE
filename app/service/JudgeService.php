@@ -11,6 +11,9 @@ use think\facade\Env;
 
 class JudgeService
 {
+    // 单个用例输出/错误流的最大读取量，防止死循环打印撑爆磁盘
+    const MAX_OUTPUT_BYTES = 16777216;
+
     // 支持的语言
     public static $languages = [
         'c'      => ['name' => 'C', 'file' => 'main.c', 'monaco' => 'c'],
@@ -30,6 +33,23 @@ class JudgeService
         'mle'     => '内存超限',
         're'      => '运行错误',
         'se'      => '系统错误',
+        'cheat'   => '疑似作弊',
+    ];
+
+    // 各语言读取输入的特征（用于识别直接输出固定答案的提交）
+    protected static $inputPatterns = [
+        'c'      => '/\b(scanf|fscanf|sscanf|gets|fgets|getchar|getc|fread|read)\s*\(/i',
+        'cpp'    => '/\b(scanf|fscanf|sscanf|gets|fgets|getchar|cin|getline|fread|read)\b/i',
+        'python' => '/\b(input|raw_input)\s*\(|sys\.stdin|open\s*\(\s*0|readline/i',
+        'js'     => '/readFileSync|process\.stdin|readline|prompt\s*\(/i',
+    ];
+
+    // 各语言输出结果的特征（用于区分「直接输出固定答案」和「空程序」）
+    protected static $outputPatterns = [
+        'c'      => '/\b(printf|puts|putchar|fputs|fwrite|putc)\s*\(/i',
+        'cpp'    => '/\b(printf|puts|putchar|cout|cerr|fputs|fwrite)\b/i',
+        'python' => '/\bprint\s*\(|\bsys\.stdout/i',
+        'js'     => '/console\.log|process\.stdout\.write|\bprint\s*\(/i',
     ];
 
     // 难度
@@ -40,12 +60,17 @@ class JudgeService
      */
     public static function detectBinaries()
     {
-        return [
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+        $cache = [
             'c'      => self::findBinary('gcc'),
             'cpp'    => self::findBinary('g++'),
             'python' => self::findBinary('python3') ?: self::findBinary('python'),
             'js'     => self::findBinary('node'),
         ];
+        return $cache;
     }
 
     /**
@@ -179,9 +204,33 @@ class JudgeService
             ->select();
         $cases = is_array($cases) ? $cases : $cases->toArray();
 
+        // 未配置测试用例时，用题目公开样例兜底判题
+        if (!$cases) {
+            $sampleInput = (string) ($problem['sample_input'] ?? '');
+            $sampleOutput = (string) ($problem['sample_output'] ?? '');
+            if (trim($sampleInput) !== '' || trim($sampleOutput) !== '') {
+                $cases = [[
+                    'id'     => 0,
+                    'name'   => '样例',
+                    'type'   => 1,
+                    'score'  => 0,
+                    'input'  => $sampleInput,
+                    'output' => $sampleOutput,
+                ]];
+            }
+        }
+
         if (!$cases) {
             self::finalize($submissionId, 'se', '该题目尚未配置可用的测试用例，无法判题。', [], 0, 0, 0);
             return true;
+        }
+
+        $needsInput = false;
+        foreach ($cases as $case) {
+            if (trim((string) $case['input']) !== '') {
+                $needsInput = true;
+                break;
+            }
         }
 
         $workDir = self::makeWorkDir($submissionId);
@@ -204,6 +253,25 @@ class JudgeService
             return true;
         }
 
+        // 题目需要读入数据，代码既没有读取输入又固定输出内容，判定为疑似硬编码答案
+        // 空实现（不读输入也不输出）属于正常错误提交，走常规判题给出 WA
+        if (intval($sub['is_test']) === 0 && $needsInput
+            && !self::readsInput($lang, (string) $sub['code'])
+            && self::writesOutput($lang, (string) $sub['code'])) {
+            self::cleanup($workDir);
+            self::finalize($submissionId, 'cheat', '代码没有读取任何输入，疑似直接输出固定答案。请读取输入后计算输出。', [], 0, 0, 0);
+            return true;
+        }
+
+        // 正式提交时按配置追加随机对拍用例
+        $randomNote = '';
+        if (intval($sub['is_test']) === 0 && intval($problem['random_cases'] ?? 0) > 0) {
+            list($randomCases, $randomNote) = self::buildRandomCases($problem, $submissionId);
+            if ($randomCases) {
+                $cases = array_merge($cases, $randomCases);
+            }
+        }
+
         $caseCount = count($cases);
         $perScore = $caseCount > 0 ? floatval($problem['total_score']) / $caseCount : 0;
         $results = [];
@@ -212,9 +280,17 @@ class JudgeService
         $allAc = true;
         $firstFail = '';
         $hasSe = false;
+        $actualOutputs = [];
+        $expectedOutputs = [];
+        $comparable = true;
 
         foreach ($cases as $idx => $case) {
-            $res = self::runCase($compile['run'], $case, $workDir, $problem, $idx);
+            $res = self::runCase($compile['run'], $case, $workDir, $problem, $idx, (string) $sub['language']);
+            if (!in_array($res['status'], ['ac', 'wa'], true)) {
+                $comparable = false;
+            }
+            $actualOutputs[] = trim(self::normalize((string) $res['output'], false));
+            $expectedOutputs[] = trim(self::normalize((string) $case['output'], false));
             $maxTime = max($maxTime, intval($res['time']));
             $maxMemory = max($maxMemory, intval($res['memory']));
             if ($res['status'] !== 'ac') {
@@ -270,9 +346,190 @@ class JudgeService
             $status = 'wa';
         }
 
+        $judgeLog = $randomNote;
+        // 多组不同输入却输出完全一致，说明结果与输入无关，疑似直接打印固定答案
+        if (intval($sub['is_test']) === 0 && !$allAc && $status !== 'se' && $comparable
+            && count($actualOutputs) >= 2
+            && count(array_unique($actualOutputs)) === 1
+            && count(array_unique($expectedOutputs)) > 1
+            && $actualOutputs[0] !== ''
+        ) {
+            $status = 'cheat';
+            $score = 0;
+            $judgeLog = trim($judgeLog . ' 多组不同输入得到完全相同的输出，疑似直接输出固定答案。请根据输入计算结果。');
+        }
+
         self::cleanup($workDir);
-        self::finalize($submissionId, $status, '', $results, $score, $maxTime, $maxMemory);
+        self::finalize($submissionId, $status, $judgeLog, $results, $score, $maxTime, $maxMemory);
         return true;
+    }
+
+    /**
+     * 代码中是否存在读取输入的操作
+     */
+    protected static function readsInput($lang, $code)
+    {
+        if (!isset(self::$inputPatterns[$lang])) {
+            return true;
+        }
+        return (bool) preg_match(self::$inputPatterns[$lang], self::stripComments($code));
+    }
+
+    /**
+     * 代码中是否存在输出结果的操作
+     */
+    protected static function writesOutput($lang, $code)
+    {
+        if (!isset(self::$outputPatterns[$lang])) {
+            return false;
+        }
+        return (bool) preg_match(self::$outputPatterns[$lang], self::stripComments($code));
+    }
+
+    /**
+     * 去掉注释，避免只靠注释里的 scanf/printf 字样绕过检测
+     */
+    protected static function stripComments($code)
+    {
+        $code = (string) $code;
+        $code = preg_replace('#/\*.*?\*/#s', '', $code);
+        $code = preg_replace('#//[^\n]*#', '', $code);
+        return preg_replace('/#[^\n]*/', '', $code);
+    }
+
+    /**
+     * 用参考程序 + 随机数据生成器构造随机用例
+     * 生成器输出一组输入，参考程序读取该输入并输出标准答案
+     */
+    protected static function buildRandomCases($problem, $submissionId)
+    {
+        $total = intval($problem['random_cases'] ?? 0);
+        if ($total <= 0) {
+            return [[], ''];
+        }
+        $refLang = (string) ($problem['ref_language'] ?? '');
+        $genLang = (string) ($problem['gen_language'] ?? '');
+        if (!isset(self::$languages[$refLang]) || !isset(self::$languages[$genLang])
+            || trim((string) ($problem['ref_code'] ?? '')) === ''
+            || trim((string) ($problem['gen_code'] ?? '')) === ''
+        ) {
+            return [[], ''];
+        }
+
+        $binaries = self::detectBinaries();
+        $refBin = $binaries[$refLang] ?? null;
+        $genBin = $binaries[$genLang] ?? null;
+        if (!$refBin || !$genBin) {
+            return [[], '随机对拍未启用：服务器缺少参考程序或生成器所需的运行环境。'];
+        }
+
+        // 参考程序与生成器按「题目 + 代码哈希」缓存编译产物，避免每次提交重复编译
+        $refKey = 'ref_' . intval($problem['id']) . '_' . substr(md5($refLang . '|' . (string) $problem['ref_code']), 0, 10);
+        $genKey = 'gen_' . intval($problem['id']) . '_' . substr(md5($genLang . '|' . (string) $problem['gen_code']), 0, 10);
+        $refCompile = self::prepareCached($refLang, $refBin, (string) $problem['ref_code'], $refKey);
+        $genCompile = self::prepareCached($genLang, $genBin, (string) $problem['gen_code'], $genKey);
+        if (!$refCompile['ok'] || !$genCompile['ok']) {
+            $why = !$refCompile['ok'] ? '参考程序编译失败' : '数据生成器编译失败';
+            return [[], '随机对拍未启用：' . $why . '。'];
+        }
+        $refDir = $refCompile['dir'];
+        $genDir = $genCompile['dir'];
+
+        $cases = [];
+        $probe = ['input' => '', 'output' => ''];
+        for ($i = 0; $i < $total; $i++) {
+            $seed = random_int(1, 999999);
+            $gen = self::runCase($genCompile['run'] . ' ' . $seed, $probe, $genDir, $problem, 'g' . $i, $genLang);
+            if (!in_array($gen['status'], ['ac', 'wa'], true)) {
+                continue;
+            }
+            $input = (string) $gen['output'];
+            if (trim($input) === '' || strlen($input) > 100000) {
+                continue;
+            }
+            $ref = self::runCase($refCompile['run'], ['input' => $input, 'output' => ''], $refDir, $problem, 'r' . $i, $refLang);
+            if (!in_array($ref['status'], ['ac', 'wa'], true)) {
+                continue;
+            }
+            $cases[] = [
+                'id'     => 0,
+                'name'   => '随机数据 ' . ($i + 1),
+                'type'   => 3,
+                'score'  => 0,
+                'input'  => $input,
+                'output' => (string) $ref['output'],
+            ];
+        }
+
+        if (!$cases) {
+            return [[], '随机对拍未生成有效数据，请检查生成器与参考程序。'];
+        }
+        return [$cases, ''];
+    }
+
+    /**
+     * 准备参考程序/生成器：编译产物按 key 缓存到 runtime/oj/cache，命中则直接复用
+     */
+    protected static function prepareCached($lang, $bin, $code, $key)
+    {
+        $isCompiled = in_array($lang, ['c', 'cpp'], true);
+        $dir = runtime_path() . 'oj' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . $key;
+        if (!is_dir($dir) && !@mkdir($dir, 0777, true) && !is_dir($dir)) {
+            return ['ok' => false, 'log' => '缓存目录创建失败', 'run' => '', 'dir' => ''];
+        }
+        $src = $dir . DIRECTORY_SEPARATOR . self::$languages[$lang]['file'];
+        $target = $dir . DIRECTORY_SEPARATOR . (DIRECTORY_SEPARATOR === '\\' ? 'main.exe' : 'main');
+        if ($isCompiled) {
+            if (is_file($target)) {
+                self::prependPath($bin);
+                return ['ok' => true, 'log' => '', 'run' => self::q($target), 'dir' => $dir];
+            }
+        } elseif (is_file($src)) {
+            return ['ok' => true, 'log' => '', 'run' => self::q($bin) . ' ' . self::q($src), 'dir' => $dir];
+        }
+
+        file_put_contents($src, (string) $code);
+        $res = self::compile($lang, $bin, $dir);
+        if (!$res['ok']) {
+            return ['ok' => false, 'log' => (string) $res['log'], 'run' => '', 'dir' => $dir];
+        }
+        return ['ok' => true, 'log' => '', 'run' => $res['run'], 'dir' => $dir];
+    }
+
+    /**
+     * 语法检查：只编译不运行，供编辑器「语法检查」使用
+     */
+    public static function syntaxCheck($lang, $code)
+    {
+        if (!isset(self::$languages[$lang])) {
+            return ['ok' => false, 'log' => '不支持的程序语言'];
+        }
+        $binaries = self::detectBinaries();
+        $bin = isset($binaries[$lang]) ? $binaries[$lang] : null;
+        if (!$bin) {
+            return ['ok' => false, 'log' => '当前判题服务器未安装该语言的编译器/解释器'];
+        }
+        $code = (string) $code;
+        if (trim($code) === '') {
+            return ['ok' => false, 'log' => '代码不能为空'];
+        }
+        if (strlen($code) > 65535) {
+            return ['ok' => false, 'log' => '代码过长，请精简后检查'];
+        }
+
+        $workDir = self::makeWorkDir('check');
+        if (!$workDir) {
+            return ['ok' => false, 'log' => '检查目录创建失败，请检查 runtime 目录写入权限'];
+        }
+        file_put_contents($workDir . DIRECTORY_SEPARATOR . self::$languages[$lang]['file'], $code);
+        $res = self::compile($lang, $bin, $workDir);
+        self::cleanup($workDir);
+
+        $log = trim((string) $res['log']);
+        if ($log === '') {
+            $log = $res['ok'] ? '语法检查通过，未发现编译错误' : '语法检查未通过（无输出信息）';
+        }
+        return ['ok' => (bool) $res['ok'], 'log' => $log];
     }
 
     /**
@@ -297,6 +554,7 @@ class JudgeService
     protected static function compile($lang, $bin, $workDir)
     {
         $isWin = DIRECTORY_SEPARATOR === '\\';
+        self::prependPath($bin);
         $src = $workDir . DIRECTORY_SEPARATOR . self::$languages[$lang]['file'];
 
         if ($lang === 'c' || $lang === 'cpp') {
@@ -346,7 +604,7 @@ class JudgeService
     /**
      * 执行一个测试用例
      */
-    protected static function runCase($runBase, $case, $workDir, $problem, $idx)
+    protected static function runCase($runBase, $case, $workDir, $problem, $idx, $lang = '')
     {
         $isWin = DIRECTORY_SEPARATOR === '\\';
         $inFile = $workDir . DIRECTORY_SEPARATOR . 'in_' . $idx . '.txt';
@@ -357,12 +615,24 @@ class JudgeService
         @unlink($errFile);
 
         $timeLimit = max(100, intval($problem['time_limit']));
+        if ($isWin) {
+            // Windows 本地环境下安全软件会随机阻塞进程启动，放宽超时避免误判
+            $timeLimit += 5000;
+        }
         $memoryLimit = max(1024, intval($problem['memory_limit']));
+        // 解释器自身需要较大的虚拟地址空间，限制过紧会导致系统错误
+        $vmLimit = $memoryLimit;
+        if ($lang === 'python') {
+            $vmLimit = max($memoryLimit, 1048576);
+        } elseif ($lang === 'js') {
+            $vmLimit = max($memoryLimit, 2097152);
+        }
 
         if ($isWin) {
             $cmd = $runBase . ' < ' . self::q($inFile) . ' > ' . self::q($outFile) . ' 2> ' . self::q($errFile);
         } else {
-            $inner = 'ulimit -v ' . $memoryLimit . '; exec ' . $runBase
+            // ulimit -f 按 512 字节块限制单个文件大小，避免无限输出写满磁盘
+            $inner = 'ulimit -v ' . $vmLimit . '; ulimit -f ' . intval(self::MAX_OUTPUT_BYTES / 512) . '; exec ' . $runBase
                 . ' < ' . self::q($inFile) . ' > ' . self::q($outFile) . ' 2> ' . self::q($errFile);
             $cmd = 'bash -c ' . self::q($inner);
         }
@@ -383,6 +653,7 @@ class JudgeService
         $timedOut = false;
         $memory = 0;
         $exitCode = null;
+        $tick = 0;
 
         while (true) {
             $st = proc_get_status($proc);
@@ -402,11 +673,25 @@ class JudgeService
 
             if ($elapsed > $timeLimit) {
                 $timedOut = true;
+                self::killTree($st['pid']);
                 @proc_terminate($proc, 9);
                 usleep(30000);
                 $st2 = proc_get_status($proc);
                 $exitCode = $st2['exitcode'];
                 break;
+            }
+
+            // Windows 无法用 ulimit 限制输出文件，运行期间轮询文件大小
+            if ($isWin && ++$tick % 40 === 0) {
+                clearstatcache(true, $outFile);
+                if (@filesize($outFile) > self::MAX_OUTPUT_BYTES) {
+                    self::killTree($st['pid']);
+                    @proc_terminate($proc, 9);
+                    usleep(30000);
+                    $st2 = proc_get_status($proc);
+                    $exitCode = $st2['exitcode'];
+                    break;
+                }
             }
             usleep(4000);
         }
@@ -414,8 +699,8 @@ class JudgeService
         $elapsedMs = intval(round((microtime(true) - $start) * 1000));
         @proc_close($proc);
 
-        $output = is_file($outFile) ? (string) file_get_contents($outFile) : '';
-        $error = is_file($errFile) ? (string) file_get_contents($errFile) : '';
+        $output = self::readLimited($outFile);
+        $error = self::readLimited($errFile);
 
         if ($timedOut) {
             return ['status' => 'tle', 'time' => $elapsedMs, 'memory' => $memory, 'output' => $output];
@@ -463,6 +748,49 @@ class JudgeService
             $text = rtrim(implode("\n", $lines), "\n");
         }
         return $text;
+    }
+
+    /**
+     * 递归结束进程及其子进程，避免超时后残留派生进程
+     */
+    protected static function killTree($pid)
+    {
+        $pid = intval($pid);
+        if ($pid <= 0) {
+            return;
+        }
+        if (DIRECTORY_SEPARATOR === '\\') {
+            $fp = @popen('taskkill /F /T /PID ' . $pid . ' > NUL 2>&1', 'r');
+            if ($fp) {
+                @pclose($fp);
+            }
+            return;
+        }
+        $childrenFile = '/proc/' . $pid . '/task/' . $pid . '/children';
+        if (is_file($childrenFile)) {
+            $children = preg_split('/\s+/', trim((string) @file_get_contents($childrenFile)), -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($children as $child) {
+                self::killTree(intval($child));
+            }
+        }
+        if (function_exists('posix_kill')) {
+            @posix_kill($pid, 9);
+        }
+    }
+
+    /**
+     * 读取输出文件，最多读取 MAX_OUTPUT_BYTES，防止巨型文件占满内存
+     */
+    protected static function readLimited($file)
+    {
+        if (!is_file($file)) {
+            return '';
+        }
+        $size = @filesize($file);
+        if ($size !== false && $size > self::MAX_OUTPUT_BYTES) {
+            return (string) @file_get_contents($file, false, null, 0, self::MAX_OUTPUT_BYTES);
+        }
+        return (string) @file_get_contents($file);
     }
 
     /**
@@ -540,6 +868,28 @@ class JudgeService
         $env['PYTHONIOENCODING'] = 'utf-8';
         $env['PYTHONUTF8'] = '1';
         return $env;
+    }
+
+    /**
+     * 把编译器所在目录加入本进程 PATH
+     * gcc 调用 as/ld、C++ 程序加载运行库都依赖同目录下的工具与 DLL
+     */
+    protected static function prependPath($bin)
+    {
+        $dir = dirname((string) $bin);
+        if ($dir === '' || $dir === '.') {
+            return;
+        }
+        $sep = DIRECTORY_SEPARATOR === '\\' ? ';' : ':';
+        $path = getenv('PATH');
+        if ($path === false || $path === null) {
+            $path = '';
+        }
+        $parts = $path === '' ? [] : explode($sep, $path);
+        if (in_array($dir, $parts, true)) {
+            return;
+        }
+        putenv('PATH=' . $dir . ($path === '' ? '' : $sep . $path));
     }
 
     /**
@@ -635,6 +985,21 @@ class JudgeService
                     $dirs[] = $dir;
                 }
                 $dirs[] = $pf . '\mingw64\bin';
+            }
+            if ($name === 'node') {
+                $dirs[] = 'C:\Program Files\nodejs';
+                $dirs[] = 'C:\Program Files (x86)\nodejs';
+            }
+            if ($name === 'python' || $name === 'python3') {
+                foreach ((array) glob('C:\Users\*\AppData\Local\Programs\Python\Python*') as $dir) {
+                    $dirs[] = $dir;
+                }
+                foreach ((array) glob('C:\Program Files\Python*') as $dir) {
+                    $dirs[] = $dir;
+                }
+                foreach ((array) glob('C:\Python*') as $dir) {
+                    $dirs[] = $dir;
+                }
             }
         } else {
             $dirs = ['/usr/bin', '/usr/local/bin', '/opt/homebrew/bin'];

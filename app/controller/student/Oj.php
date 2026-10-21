@@ -90,6 +90,19 @@ class Oj
             ->select();
         $samples = is_array($samples) ? $samples : $samples->toArray();
 
+        // 未配置测试用例时，用题目公开样例兜底展示
+        if (!$samples) {
+            $sampleInput = (string) ($problem['sample_input'] ?? '');
+            $sampleOutput = (string) ($problem['sample_output'] ?? '');
+            if (trim($sampleInput) !== '' || trim($sampleOutput) !== '') {
+                $samples = [[
+                    'name'   => '样例',
+                    'input'  => $sampleInput,
+                    'output' => $sampleOutput,
+                ]];
+            }
+        }
+
         $allowed = array_values(array_filter(explode(',', $problem['languages']), function ($lang) {
             return isset(JudgeService::$languages[$lang]);
         }));
@@ -143,6 +156,33 @@ class Oj
         return $this->createSubmission(2);
     }
 
+    /**
+     * 语法检查（只编译，不运行用例）
+     */
+    public function check()
+    {
+        $student = $this->student();
+        if (empty($student['id'])) {
+            return json(['code' => 401, 'msg' => '请先登录']);
+        }
+
+        $problemId = intval(input('post.problem_id', 0));
+        $problem = Db::name('oj_problems')->where('id', $problemId)->where('is_public', 1)->find();
+        if (!$problem) {
+            return json(['code' => 0, 'msg' => '题目不存在或已下架']);
+        }
+
+        $language = (string) input('post.language', '');
+        $allowed = explode(',', $problem['languages']);
+        if (!in_array($language, $allowed, true) || !isset(JudgeService::$languages[$language])) {
+            return json(['code' => 0, 'msg' => '该题目不支持所选语言']);
+        }
+
+        $code = isset($_POST['code']) ? (string) $_POST['code'] : '';
+        $res = JudgeService::syntaxCheck($language, $code);
+        return json(['code' => 1, 'data' => ['ok' => $res['ok'], 'log' => $res['log']]]);
+    }
+
     protected function createSubmission($isTest)
     {
         $student = $this->student();
@@ -176,7 +216,9 @@ class Oj
                 ->where('type', 1)
                 ->where('enabled', 1)
                 ->count();
-            if (!$hasSample) {
+            $hasSampleText = trim((string) ($problem['sample_input'] ?? '')) !== ''
+                || trim((string) ($problem['sample_output'] ?? '')) !== '';
+            if (!$hasSample && !$hasSampleText) {
                 return json(['code' => 0, 'msg' => '该题目暂未配置公开样例']);
             }
         }

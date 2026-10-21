@@ -34,7 +34,7 @@ return [
             'slave_no'        => '',
             'fields_strict'   => true,
             'break_reconnect' => false,
-            'trigger_sql'     => env('app_debug', true),
+            'trigger_sql'     => (bool) env('app_debug', false),
             'fields_cache'    => false,
         ],
     ],

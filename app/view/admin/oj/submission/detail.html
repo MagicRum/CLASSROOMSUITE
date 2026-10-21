@@ -98,7 +98,7 @@
                 <tr>
                     <td>{$idx}</td>
                     <td>{$item.name}</td>
-                    <td>{if $item.type == 1}<span class="badge bg-primary">样例</span>{else /}<span class="badge bg-secondary">隐藏</span>{/if}</td>
+                    <td>{if $item.type == 1}<span class="badge bg-primary">样例</span>{elseif $item.type == 3 /}<span class="badge bg-secondary">随机</span>{else /}<span class="badge bg-secondary">隐藏</span>{/if}</td>
                     <td>
                         {if $item.status == 'ac'}<span class="badge bg-success">{$statusMap[$item['status']]}</span>
                         {elseif $item.status == 'ce' || $item.status == 'se' /}<span class="badge bg-warning text-dark">{$statusMap[$item['status']]}</span>

@@ -91,7 +91,8 @@ class Exam extends Base
      */
     public function batchDelete()
     {
-        $ids = input('ids/a', []);
+        if ($resp = $this->requirePost()) return $resp;
+        $ids = input('post.ids/a', []);
         if (empty($ids)) return $this->error('请选择要删除的记录');
         ExamRecord::whereIn('id', $ids)->delete();
         return $this->success('批量删除成功');
@@ -102,7 +103,8 @@ class Exam extends Base
      */
     public function delete()
     {
-        $id = input('id', 0);
+        if ($resp = $this->requirePost()) return $resp;
+        $id = input('post.id', 0);
         if (!$id) return $this->error('参数错误');
         ExamRecord::where('id', $id)->delete();
         return $this->success('删除成功');

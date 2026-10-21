@@ -20,7 +20,7 @@ class Draw extends Base
 
         return view('admin/draw/index', [
             'active'    => 'draw',
-            'poolJson'  => json_encode($pool, JSON_UNESCAPED_UNICODE),
+            'poolJson'  => json_encode($pool, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
             'poolCount' => count($pool),
         ]);
     }

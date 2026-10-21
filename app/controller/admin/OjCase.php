@@ -100,6 +100,21 @@ class OjCase extends Base
             if ($zip->open($files[0]->getPathname()) !== true) {
                 return $this->error('压缩包解析失败');
             }
+            // 拒绝绝对路径与 ../ 条目，避免解压时写到临时目录之外
+            $unsafe = false;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $entry = str_replace('\\', '/', (string) $zip->getNameIndex($i));
+                if ($entry === '' || $entry[0] === '/'
+                    || preg_match('#(^|/)\.\.(/|$)#', $entry)
+                    || preg_match('#^[A-Za-z]:#', $entry)) {
+                    $unsafe = true;
+                    break;
+                }
+            }
+            if ($unsafe) {
+                $zip->close();
+                return $this->error('压缩包内包含非法路径，请重新打包');
+            }
             $zip->extractTo($tempDir);
             $zip->close();
 

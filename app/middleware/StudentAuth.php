@@ -39,6 +39,14 @@ class StudentAuth
         if ($request->isAjax() || $request->isJson()) {
             return json(['code' => 401, 'msg' => '未登录，请先登录']);
         }
-        return redirect('/student/login');
+
+        // 判题系统（/oj）区分入口来源：教师已登录时直接进教师端判题管理
+        $path = strtolower(trim($request->pathinfo(), '/'));
+        $isOj = $path === 'oj' || strpos($path, 'oj/') === 0;
+        if ($isOj && !empty($_SESSION['admin_id'])) {
+            return redirect('/admin/oj/problem');
+        }
+
+        return redirect($isOj ? '/student/login?from=oj' : '/student/login');
     }
 }

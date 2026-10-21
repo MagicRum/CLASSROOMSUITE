@@ -38,6 +38,7 @@ Route::group('oj', function () {
     Route::rule('status', 'student.Oj/status');
     Route::rule('submit', 'student.Oj/submit');
     Route::rule('run', 'student.Oj/run');
+    Route::rule('check', 'student.Oj/check');
     Route::rule('problem', 'student.Oj/problem');
     Route::rule('records', 'student.Oj/records');
 })->middleware(\app\middleware\StudentAuth::class);

@@ -3,62 +3,100 @@
 {block name="head"}
 <link href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" rel="stylesheet">
 <style>
-    .oj-statement { font-size: 14px; line-height: 1.85; color: rgba(255,255,255,.82); }
+    .oj-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .oj-head h4 { font-weight: 600; letter-spacing: -.2px; }
+    .oj-meta { margin-top: 6px; color: var(--jb-text-dim); font-size: 12.5px; }
+    .oj-meta span + span::before { content: '·'; margin: 0 8px; color: var(--jb-text-faint); }
+    .oj-tag {
+        display: inline-flex; align-items: center; height: 22px; padding: 0 10px;
+        border: 1px solid var(--jb-border); border-radius: 999px;
+        background: var(--jb-panel-2); color: var(--jb-text-dim);
+        font-size: 12px; white-space: nowrap;
+    }
+    .oj-tag-accent { color: var(--jb-blue-hi); border-color: rgba(168,85,247,.35); background: rgba(168,85,247,.10); }
+
+    .oj-statement { font-size: 14.5px; line-height: 1.9; color: var(--jb-text); }
     .oj-statement img { max-width: 100%; border-radius: 8px; }
-    .oj-statement p { margin-bottom: .7rem; }
+    .oj-statement p { margin-bottom: .75rem; }
     .oj-statement pre {
-        background: #0E0E11; border: 1px solid rgba(255,255,255,.09); border-radius: 8px;
-        padding: 12px 14px; color: rgba(255,255,255,.82);
+        background: var(--jb-panel-2); border: 1px solid var(--jb-border); border-radius: 8px;
+        padding: 12px 14px; color: var(--jb-text);
         font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
         font-size: 13px; line-height: 1.6; white-space: pre-wrap;
     }
-    .oj-statement code { color: #C084FC; background: rgba(168,85,247,.1); padding: 1px 5px; border-radius: 4px; }
-    .oj-statement blockquote { border-left: 3px solid rgba(168,85,247,.5); margin: .6rem 0; padding-left: 12px; color: rgba(255,255,255,.6); }
-    .oj-label {
-        font-size: 12px; letter-spacing: 1px; color: rgba(255,255,255,.45);
-        margin: 18px 0 8px;
+    .oj-statement code { color: var(--jb-blue-hi); background: rgba(168,85,247,.10); padding: 1px 5px; border-radius: 4px; }
+    .oj-statement blockquote {
+        border-left: 3px solid var(--jb-blue); margin: .6rem 0; padding-left: 12px;
+        color: var(--jb-text-dim);
     }
+    .oj-label { font-size: 12px; letter-spacing: 1px; color: var(--jb-text-faint); margin: 20px 0 8px; }
+    .oj-label:first-of-type { margin-top: 4px; }
     .oj-box {
-        background: #0E0E11; border: 1px solid rgba(255,255,255,.09); border-radius: 8px;
-        padding: 12px 14px; color: rgba(255,255,255,.82);
+        background: var(--jb-panel-2); border: 1px solid var(--jb-border); border-radius: 8px;
+        padding: 12px 14px; color: var(--jb-text);
         font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
         font-size: 13px; line-height: 1.65;
         white-space: pre-wrap; overflow-wrap: anywhere;
-        max-height: 240px; overflow: auto;
+        max-height: 220px; overflow: auto;
     }
     .oj-code-pre {
-        background: #0E0E11; border: 1px solid rgba(255,255,255,.09); border-radius: 8px;
-        padding: 12px 14px; color: rgba(255,255,255,.82);
+        background: var(--jb-panel-2); border: 1px solid var(--jb-border); border-radius: 8px;
+        padding: 12px 14px; color: var(--jb-text);
         font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
         font-size: 12.5px; line-height: 1.6;
         white-space: pre-wrap; overflow-wrap: anywhere;
         max-height: 220px; overflow: auto;
     }
-    #monacoHost { height: 440px; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; overflow: hidden; }
+    .oj-scroll { max-height: calc(100vh - 232px); overflow-y: auto; }
+    .oj-scroll::-webkit-scrollbar { width: 8px; }
+    .oj-scroll::-webkit-scrollbar-thumb { background: var(--jb-border-strong); border-radius: 8px; }
+
+    #monacoHost {
+        height: clamp(340px, calc(100vh - 486px), 620px);
+        border: 1px solid var(--jb-border); border-radius: 8px; overflow: hidden;
+    }
     .oj-textarea {
-        height: 440px !important; resize: vertical;
+        height: clamp(340px, calc(100vh - 486px), 620px) !important; resize: vertical;
+        background: var(--jb-panel-2); color: var(--jb-text); border-color: var(--jb-border);
         font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
         font-size: 13px; line-height: 1.6; tab-size: 4;
     }
+    .oj-editorcard.oj-expanded #monacoHost,
+    .oj-editorcard.oj-expanded .oj-textarea { height: calc(100vh - 190px) !important; }
+
     .oj-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .oj-toolbar .form-select { width: auto; }
+    .oj-actionbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+    .oj-actionbar .oj-hint { margin-left: auto; color: var(--jb-text-faint); font-size: 12px; }
     .oj-result-status { font-size: 15px; font-weight: 600; }
     .oj-case-table td, .oj-case-table th { font-size: 12.5px; }
     .oj-cases-detail { margin: 8px 0 0; }
+    .oj-kbd {
+        display: inline-block; padding: 1px 6px; margin-left: 6px;
+        border: 1px solid var(--jb-border); border-radius: 4px;
+        color: var(--jb-text-faint); font-size: 11px; font-family: inherit;
+    }
     @media (min-width: 1200px) {
-        .oj-editor-col { position: sticky; top: 20px; }
+        .oj-editor-col, .oj-statement-col { position: sticky; top: 16px; }
+    }
+    @media (max-width: 1199px) {
+        .oj-scroll { max-height: none; }
     }
 </style>
 {/block}
 {block name="content"}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="oj-head">
     <div>
-        <h4 class="mb-1">{$problem.title}</h4>
-        <div class="text-muted small">
-            {if $problem.difficulty == 1}简单{/if}
-            {if $problem.difficulty == 2}中等{/if}
-            {if $problem.difficulty == 3}困难{/if}
-            · 时间限制 {$problem.time_limit} ms · 内存限制 {:round($problem.memory_limit / 1024, 0)} MB · 满分 {$problem.total_score}
-            {if $problem.tags}· {$problem.tags}{/if}
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h4 class="mb-0">{$problem.title}</h4>
+            <span class="oj-tag">难度 {if $problem.difficulty == 1}简单{/if}{if $problem.difficulty == 2}中等{/if}{if $problem.difficulty == 3}困难{/if}</span>
+            {if $problem.tags}<span class="oj-tag">{$problem.tags}</span>{/if}
+        </div>
+        <div class="oj-meta">
+            <span>时间限制 {$problem.time_limit} ms</span>
+            <span>内存限制 {:round($problem.memory_limit / 1024, 0)} MB</span>
+            <span>满分 {$problem.total_score}</span>
+            <span class="oj-tag oj-tag-accent" style="height:auto;padding:1px 8px;">我的最高分 {$best} / {$problem.total_score}{if $myCount > 0}（{$myCount} 次提交）{/if}</span>
         </div>
     </div>
     <div class="d-flex gap-2">
@@ -68,16 +106,13 @@
 </div>
 
 <div class="row g-3">
-    <div class="col-xl-6">
+    <div class="col-xl-5 oj-statement-col">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
                 <span>题目描述</span>
-                <span class="text-muted small">
-                    我的最高分 <span class="text-white">{$best}</span> / {$problem.total_score}
-                    {if $myCount > 0}（{$myCount} 次提交）{/if}
-                </span>
+                <span class="text-muted small">只读，可独立滚动</span>
             </div>
-            <div class="card-body">
+            <div class="card-body oj-scroll">
                 <div class="oj-statement" id="problemDesc">{$problem.description|raw}</div>
 
                 {if $problem.input_desc}
@@ -116,13 +151,13 @@
         </div>
     </div>
 
-    <div class="col-xl-6">
+    <div class="col-xl-7">
         <div class="oj-editor-col">
-            <div class="card">
-                <div class="card-header">
+            <div class="card oj-editorcard" id="editorCard">
+                <div class="card-header py-2">
                     <div class="oj-toolbar">
                         <span>代码编辑</span>
-                        <select id="langSelect" class="form-select form-select-sm" style="width:auto;">
+                        <select id="langSelect" class="form-select form-select-sm">
                             {volist name="allowed" id="code"}
                             <option value="{$code}" {if !isset($available[$code]) || empty($available[$code])}data-unavailable="1"{/if}>
                                 {$languageMap[$code]['name']}{if !isset($available[$code]) || empty($available[$code])}（环境未就绪）{/if}
@@ -130,23 +165,29 @@
                             {/volist}
                         </select>
                         <span class="text-muted small ms-auto" id="saveHint">代码会自动保存到本机</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnExpand" onclick="toggleExpand()" title="放大编辑区">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="card-body">
                     <div id="monacoHost" style="display:none;"></div>
                     <textarea id="codeFallback" class="form-control oj-textarea" spellcheck="false"></textarea>
-                    <div class="d-flex flex-wrap gap-2 mt-3">
+                    <div class="oj-actionbar">
                         <button type="button" class="btn btn-primary btn-sm" id="btnSubmit" onclick="submitCode(false)">
-                            <i class="bi bi-send"></i> 提交评测
+                            <i class="bi bi-send"></i> 提交评测<span class="oj-kbd">Ctrl + Enter</span>
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRun" onclick="submitCode(true)">
                             <i class="bi bi-play"></i> 样例自测
                         </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnCheck" onclick="checkSyntax()">
+                            <i class="bi bi-check2-square"></i> 语法检查
+                        </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetCode()">
                             <i class="bi bi-arrow-counterclockwise"></i> 恢复模板
                         </button>
+                        <span class="oj-hint">自测与语法检查不计入成绩</span>
                     </div>
-                    <div class="text-muted small mt-2">样例自测只运行公开样例，不计入成绩与提交统计。</div>
                 </div>
             </div>
 
@@ -191,6 +232,9 @@
 </div>
 {/block}
 {block name="js"}
+<script>window.MONACO_BASE = '/static/monaco/vs';</script>
+<script src="/static/monaco/vs/loader.js"
+        onerror="window.MONACO_BASE='https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs';var s=document.createElement('script');s.src=window.MONACO_BASE+'/loader.js';document.head.appendChild(s);"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <script>
@@ -201,6 +245,7 @@ var LANG_INFO = <?php
         $langInfo[$code] = [
             'name' => $languageMap[$code]['name'],
             'monaco' => $languageMap[$code]['monaco'],
+            'file' => $languageMap[$code]['file'],
             'available' => !empty($available[$code]),
         ];
     }
@@ -214,7 +259,8 @@ var TEMPLATES = {
 };
 var STATUS_TEXT = {
     pending: '排队中', judging: '判题中', ac: '答案正确', ce: '编译错误',
-    wa: '答案错误', tle: '运行超时', mle: '内存超限', re: '运行错误', se: '系统错误'
+    wa: '答案错误', tle: '运行超时', mle: '内存超限', re: '运行错误', se: '系统错误',
+    cheat: '疑似作弊'
 };
 
 var monacoEditor = null;
@@ -248,9 +294,22 @@ function saveCode() {
     setTimeout(function () { hint.textContent = '代码会自动保存到本机'; }, 1200);
 }
 
-function initMonaco() {
-    if (typeof require === 'undefined') { return; }
-    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+function editorHint(text) {
+    var hint = document.getElementById('saveHint');
+    if (hint) { hint.textContent = text; }
+}
+
+function initMonaco(retry) {
+    retry = retry || 0;
+    if (typeof require === 'undefined') {
+        if (retry < 20) {
+            setTimeout(function () { initMonaco(retry + 1); }, 400);
+        } else {
+            editorHint('代码高亮组件加载失败，已使用纯文本编辑（语法检查仍可用）');
+        }
+        return;
+    }
+    require.config({ paths: { 'vs': window.MONACO_BASE || 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
     require(['vs/editor/editor.main'], function () {
         var value = fallbackEl().value;
         document.getElementById('monacoHost').style.display = '';
@@ -275,13 +334,107 @@ function initMonaco() {
                 monaco.editor.setTheme(e.detail.theme === 'light' ? 'vs' : 'vs-dark');
             }
         });
+        editorHint('代码会自动保存到本机');
+    }, function () {
+        editorHint('代码高亮组件加载失败，已使用纯文本编辑（语法检查仍可用）');
     });
+}
+
+function clearMarkers() {
+    if (monacoEditor && window.monaco) {
+        monaco.editor.setModelMarkers(monacoEditor.getModel(), 'oj', []);
+    }
+}
+
+function applyMarkers(log, lang) {
+    if (!monacoEditor || !window.monaco || !log) { return; }
+    var file = (LANG_INFO[lang] && LANG_INFO[lang].file) ? LANG_INFO[lang].file : '';
+    var re = file ? new RegExp(file.replace(/\./g, '\\.') + ':(\\d+):(\\d+)?') : null;
+    var markers = [];
+    String(log).split(/\r?\n/).forEach(function (line) {
+        var m = re ? line.match(re) : null;
+        if (m) {
+            var ln = parseInt(m[1], 10);
+            var col = parseInt(m[2] || '1', 10);
+            markers.push({
+                severity: monaco.MarkerSeverity.Error,
+                message: line.trim(),
+                startLineNumber: ln, startColumn: col,
+                endLineNumber: ln, endColumn: col + 1
+            });
+            return;
+        }
+        var pm = line.match(/line (\d+)/);
+        if (pm) {
+            var pln = parseInt(pm[1], 10);
+            markers.push({
+                severity: monaco.MarkerSeverity.Error,
+                message: line.trim(),
+                startLineNumber: pln, startColumn: 1,
+                endLineNumber: pln, endColumn: 1
+            });
+        }
+    });
+    monaco.editor.setModelMarkers(monacoEditor.getModel(), 'oj', markers);
+}
+
+function checkSyntax() {
+    var lang = currentLang || document.getElementById('langSelect').value;
+    var code = getCode();
+    if (code.trim() === '') { showAlert('代码不能为空', 'danger'); return; }
+    if (LANG_INFO[lang] && !LANG_INFO[lang].available) {
+        showAlert('当前服务器未安装该语言的运行环境，无法检查', 'danger');
+        return;
+    }
+
+    var btn = document.getElementById('btnCheck');
+    btn.disabled = true;
+    editorHint('正在检查语法…');
+
+    var body = new URLSearchParams();
+    body.append('problem_id', PROBLEM_ID);
+    body.append('language', lang);
+    body.append('code', code);
+
+    fetch('/oj/check', { method: 'POST', body: body })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            btn.disabled = false;
+            editorHint('代码会自动保存到本机');
+            if (d.code !== 1) { showAlert(d.msg || '语法检查失败', 'danger'); return; }
+
+            var card = document.getElementById('resultCard');
+            if (d.data.ok) {
+                clearMarkers();
+                showAlert('语法检查通过', 'success');
+                return;
+            }
+            applyMarkers(d.data.log, lang);
+            card.style.display = '';
+            document.getElementById('resultId').textContent = '语法检查';
+            var st = document.getElementById('resultStatus');
+            st.textContent = '编译错误';
+            st.className = 'oj-result-status text-danger';
+            document.getElementById('resultScore').textContent = '';
+            document.getElementById('resultTime').textContent = '';
+            document.getElementById('resultMemory').textContent = '';
+            document.getElementById('compileLogWrap').style.display = '';
+            document.getElementById('compileLog').textContent = d.data.log || '';
+            document.getElementById('caseBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">语法检查未运行测试用例</td></tr>';
+            showAlert('发现语法/编译错误，已在编辑器中标注', 'danger');
+        })
+        .catch(function () {
+            btn.disabled = false;
+            editorHint('代码会自动保存到本机');
+            showAlert('网络异常，语法检查失败', 'danger');
+        });
 }
 
 function switchLang(lang) {
     if (currentLang) saveCode();
     currentLang = lang;
     loadCode(lang);
+    clearMarkers();
     if (monacoEditor) {
         monaco.editor.setModelLanguage(monacoEditor.getModel(), LANG_INFO[lang] ? LANG_INFO[lang].monaco : 'plaintext');
     }
@@ -297,6 +450,24 @@ function resetCode() {
     saveCode();
     showAlert('已恢复默认代码模板', 'info');
 }
+
+function toggleExpand() {
+    var card = document.getElementById('editorCard');
+    var btn = document.getElementById('btnExpand');
+    var expanded = card.classList.toggle('oj-expanded');
+    btn.innerHTML = expanded ? '<i class="bi bi-arrows-angle-contract"></i>' : '<i class="bi bi-arrows-fullscreen"></i>';
+    btn.title = expanded ? '还原编辑区' : '放大编辑区';
+    if (monacoEditor) {
+        setTimeout(function () { monacoEditor.layout(); }, 220);
+    }
+}
+
+document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!document.getElementById('btnSubmit').disabled) { submitCode(false); }
+    }
+});
 
 function badgeClass(status) {
     if (status === 'ac') return 'bg-success';
@@ -355,6 +526,7 @@ function startPolling(id, isTest) {
     pollCount = 0;
     var card = document.getElementById('resultCard');
     card.style.display = '';
+    setTimeout(function () { card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 60);
     document.getElementById('resultId').textContent = (isTest ? '样例自测' : '正式提交') + ' #' + id;
     document.getElementById('resultStatus').textContent = '排队中';
     document.getElementById('resultStatus').className = 'oj-result-status text-info';
@@ -421,7 +593,8 @@ function renderResult(data) {
     var body = document.getElementById('caseBody');
     if (!data.cases || data.cases.length === 0) {
         body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">'
-            + (data.status === 'pending' || data.status === 'judging' ? '等待判题结果' : '无可用测试用例') + '</td></tr>';
+            + (data.status === 'pending' || data.status === 'judging' ? '等待判题结果'
+                : (data.status === 'cheat' ? '代码未读取输入，未运行测试用例' : '无可用测试用例')) + '</td></tr>';
         return;
     }
     var html = '';
@@ -436,7 +609,8 @@ function renderResult(data) {
                 + '<div class="small">期望输出</div><pre class="oj-code-pre mb-1">' + escapeHtml(c.expected) + '</pre>'
                 + '<div class="small">实际输出</div><pre class="oj-code-pre mb-0">' + escapeHtml(c.output) + '</pre>'
                 + '</details></div>' : '') + '</td>'
-            + '<td>' + (c.type === 1 ? '<span class="badge bg-primary">样例</span>' : '<span class="badge bg-secondary">隐藏</span>') + '</td>'
+            + '<td>' + (c.type === 1 ? '<span class="badge bg-primary">样例</span>'
+                : (c.type === 3 ? '<span class="badge bg-secondary">随机</span>' : '<span class="badge bg-secondary">隐藏</span>')) + '</td>'
             + '<td><span class="badge ' + badgeClass(c.status) + '">' + (STATUS_TEXT[c.status] || c.status) + '</span></td>'
             + '<td>' + c.time + ' ms</td>'
             + '<td>' + c.memory + ' KB</td>'

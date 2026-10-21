@@ -60,7 +60,7 @@
                     <td><span class="badge bg-primary">{$item.problem_count}</span></td>
                     <td>{$item.sort}</td>
                     <td>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCat({$item.id}, '{$item.name|raw}', {$item.parent_id}, {$item.sort})"><i class="bi bi-pencil"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-cat-id="{$item.id}" data-cat-name="{$item.name}" data-cat-parent="{$item.parent_id}" data-cat-sort="{$item.sort}" onclick="editCat(this)"><i class="bi bi-pencil"></i></button>
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="delCat({$item.id})"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
@@ -84,11 +84,11 @@ document.getElementById('catForm').addEventListener('submit', function (e) {
             if (d.code === 1) setTimeout(function () { location.reload(); }, 700);
         });
 });
-function editCat(id, name, parentId, sort) {
-    document.getElementById('catId').value = id;
-    document.getElementById('catName').value = name;
-    document.getElementById('catParent').value = parentId;
-    document.getElementById('catSort').value = sort;
+function editCat(btn) {
+    document.getElementById('catId').value = btn.dataset.catId || 0;
+    document.getElementById('catName').value = btn.dataset.catName || '';
+    document.getElementById('catParent').value = btn.dataset.catParent || 0;
+    document.getElementById('catSort').value = btn.dataset.catSort || 0;
     document.getElementById('catSubmitText').textContent = '保存修改';
     document.getElementById('catCancel').style.display = '';
 }

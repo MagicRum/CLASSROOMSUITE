@@ -100,7 +100,8 @@ class Question extends Base
      */
     public function delete()
     {
-        $id = input('id', 0);
+        if ($resp = $this->requirePost()) return $resp;
+        $id = input('post.id', 0);
         if (!$id) return $this->error('参数错误');
         QuestionModel::where('id', $id)->delete();
         return $this->success('删除成功');

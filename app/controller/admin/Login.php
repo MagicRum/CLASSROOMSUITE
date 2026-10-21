@@ -7,16 +7,19 @@ class Login
 {
     public function index()
     {
+        $from = input('get.from', '');
+        $from = $from === 'oj' ? 'oj' : '';
         if (!empty($_SESSION['admin_id'])) {
-            return redirect('/admin/dashboard');
+            return redirect($from === 'oj' ? '/admin/oj/problem' : '/admin/dashboard');
         }
-        return view('admin/login/index');
+        return view('admin/login/index', ['from' => $from]);
     }
 
     public function doLogin()
     {
         $username = trim(input('post.username', ''));
         $password = input('post.password', '');
+        $from     = input('post.from', '') === 'oj' ? 'oj' : '';
 
         if (!$username || !$password) {
             return json(['code' => 0, 'msg' => '用户名和密码不能为空']);
@@ -39,7 +42,7 @@ class Login
             'last_login_ip' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
         ]);
 
-        return json(['code' => 1, 'msg' => '登录成功', 'url' => '/admin/dashboard']);
+        return json(['code' => 1, 'msg' => '登录成功', 'url' => $from === 'oj' ? '/admin/oj/problem' : '/admin/dashboard']);
     }
 
     public function logout()

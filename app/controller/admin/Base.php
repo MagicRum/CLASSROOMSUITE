@@ -24,6 +24,17 @@ class Base
     }
 
     /**
+     * 仅允许 POST 访问，降低 CSRF 与误触发风险
+     */
+    protected function requirePost()
+    {
+        if (!request()->isPost()) {
+            return $this->error('请求方式不正确');
+        }
+        return null;
+    }
+
+    /**
      * 操作失败
      */
     protected function error($msg = '操作失败', $data = null)

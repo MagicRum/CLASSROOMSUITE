@@ -93,7 +93,7 @@
                         <span class="ql-formats">
                             <button class="ql-link"></button>
                             <button class="ql-image"></button>
-                            <button class="ql-formula-btn" type="button" title="插入 LaTeX 公式">Σ</button>
+                            <button class="formula-btn" type="button" title="插入 LaTeX 公式">Σ</button>
                             <button class="ql-clean"></button>
                         </span>
                     </div>
@@ -123,6 +123,9 @@
                             <textarea name="sample_output" class="form-control" rows="4" placeholder="公开样例输出">{$problem.sample_output}</textarea>
                         </div>
                         <div class="col-12">
+                            <div class="text-muted small">样例仅用于题目展示；未在下方添加测试用例时，判题会使用这组样例兜底。</div>
+                        </div>
+                        <div class="col-12">
                             <label class="form-label small">提示</label>
                             <textarea name="hint" class="form-control" rows="2" placeholder="数据范围、算法提示等">{$problem.hint}</textarea>
                         </div>
@@ -134,7 +137,7 @@
             <div class="card mb-3">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-list-check"></i> 测试用例</span>
-                    <span class="text-muted small">样例对学生在提交前可见，隐藏用例仅用于正式判分</span>
+                    <span class="text-muted small">建议至少配置 3 组隐藏用例，避免学生直接输出样例答案；一个用例都没有时使用上方样例兜底</span>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-hover mb-0 align-middle">
@@ -161,7 +164,7 @@
                                 <td>
                                     {if $case.enabled == 1}<span class="badge bg-success">启用</span>{else /}<span class="badge bg-secondary">禁用</span>{/if}
                                 </td>
-                                <td class="text-muted case-code">{$case.input|raw}  ⇒  {$case.output|raw}</td>
+                                <td class="text-muted case-code">{$case.input|htmlentities}  ⇒  {$case.output|htmlentities}</td>
                                 <td>
                                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCase({$case.id})"><i class="bi bi-pencil"></i></button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleCase({$case.id}, {$case.enabled})"><i class="bi bi-power"></i></button>
@@ -253,6 +256,40 @@
                 </div>
             </div>
 
+            <div class="card mt-3">
+                <div class="card-header py-2"><i class="bi bi-shuffle"></i> 随机对拍（可选）</div>
+                <div class="card-body">
+                    <div class="text-muted small mb-2">生成器输出一组输入（可读取命令行第一个参数作为随机种子），参考程序按标准输入输出标准答案。正式提交时随机生成多组数据对拍，防止直接输出固定答案。</div>
+                    <div class="row g-2">
+                        <div class="col-7">
+                            <label class="form-label small">参考程序语言</label>
+                            <select name="ref_language" class="form-select form-select-sm">
+                                <option value="">不启用</option>
+                                {volist name="languageMap" id="langInfo"}
+                                <option value="{$key}" {if $problem.ref_language == $key}selected{/if}>{$langInfo.name}</option>
+                                {/volist}
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label small">对拍组数</label>
+                            <input type="number" name="random_cases" class="form-control form-control-sm" value="{$problem.random_cases}" min="0" max="20">
+                        </div>
+                    </div>
+                    <label class="form-label small mt-2">参考程序代码</label>
+                    <textarea name="ref_code" class="form-control form-control-sm" rows="6" spellcheck="false" style="font-family:Consolas,monospace;">{$problem.ref_code|htmlentities}</textarea>
+                    <label class="form-label small mt-2">数据生成器语言</label>
+                    <select name="gen_language" class="form-select form-select-sm">
+                        <option value="">不启用</option>
+                        {volist name="languageMap" id="langInfo2"}
+                        <option value="{$key}" {if $problem.gen_language == $key}selected{/if}>{$langInfo2.name}</option>
+                        {/volist}
+                    </select>
+                    <label class="form-label small mt-2">数据生成器代码</label>
+                    <textarea name="gen_code" class="form-control form-control-sm" rows="6" spellcheck="false" style="font-family:Consolas,monospace;">{$problem.gen_code|htmlentities}</textarea>
+                    <div class="form-text">组数填 0 或任一项留空即关闭随机对拍，关闭后仅使用固定用例判题。</div>
+                </div>
+            </div>
+
             {if $problem.id}
             <div class="card">
                 <div class="card-body small text-muted">
@@ -309,6 +346,7 @@
                         </div>
                     </div>
                     <div class="form-check mt-2">
+                        <input type="hidden" name="enabled" value="0">
                         <input class="form-check-input" type="checkbox" name="enabled" value="1" id="caseEnabled" checked>
                         <label class="form-check-label small" for="caseEnabled">启用该用例</label>
                     </div>
@@ -330,14 +368,24 @@
 var DESCRIPTION = {$descriptionJson|raw};
 var CASES = {$casesJson|raw};
 
-var quill = new Quill('#editor', {
-    theme: 'snow',
-    modules: {toolbar: '#editorToolbar'},
-    placeholder: '输入题干，可插入图片、公式和代码块…'
-});
-quill.root.innerHTML = DESCRIPTION || '';
+var quill = null;
+try {
+    quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: {toolbar: '#editorToolbar'},
+        placeholder: '输入题干，可插入图片、公式和代码块…'
+    });
+    quill.root.innerHTML = DESCRIPTION || '';
+} catch (e) {
+    quill = null;
+    var editorBox = document.getElementById('editor');
+    if (editorBox) {
+        editorBox.innerHTML = '<div class="p-3 text-muted small">富文本组件加载失败，题干保持原内容；其余字段仍可正常保存。</div>';
+    }
+}
 
-var toolbar = quill.getModule('toolbar');
+var toolbar = quill ? quill.getModule('toolbar') : null;
+if (toolbar) {
 toolbar.addHandler('image', function () {
     var input = document.createElement('input');
     input.type = 'file';
@@ -360,17 +408,23 @@ toolbar.addHandler('image', function () {
     };
     input.click();
 });
-toolbar.addHandler('formula-btn', function () {
-    var tex = window.prompt('输入 LaTeX 公式（不含 $ 符号），例如 O(n\\log n)');
-    if (!tex) return;
-    var range = quill.getSelection(true);
-    quill.insertText(range.index, ' $' + tex + '$ ', 'user');
-    quill.setSelection(range.index + tex.length + 3);
-});
+}
+
+// 自定义按钮不是 Quill 注册格式，直接绑定点击，避免工具栏忽略该按钮
+var formulaBtn = document.querySelector('.formula-btn');
+if (formulaBtn && quill) {
+    formulaBtn.addEventListener('click', function () {
+        var tex = window.prompt('输入 LaTeX 公式（不含 $ 符号），例如 O(n\\log n)');
+        if (!tex) return;
+        var range = quill.getSelection(true);
+        quill.insertText(range.index, ' $' + tex + '$ ', 'user');
+        quill.setSelection(range.index + tex.length + 3);
+    });
+}
 
 document.getElementById('problemForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    document.getElementById('descriptionInput').value = quill.root.innerHTML;
+    document.getElementById('descriptionInput').value = quill ? quill.root.innerHTML : DESCRIPTION;
     fetch('/admin/oj/problem/save', {method: 'POST', body: new FormData(this)})
         .then(function (r) { return r.json(); })
         .then(function (d) {
@@ -378,6 +432,54 @@ document.getElementById('problemForm').addEventListener('submit', function (e) {
             if (d.code === 1 && d.url) setTimeout(function () { location.href = d.url; }, 700);
         });
 });
+
+// 用例弹窗不依赖 Bootstrap JS，避免 CDN 不可用时按钮无响应
+function showCaseModal() {
+    var el = document.getElementById('caseModal');
+    if (!el) return;
+    // 弹窗原先位于 .main-content（z-index:1）内，会被挂在 body 上的遮罩层盖住
+    // 这里把弹窗挂到 body 下，使其与遮罩处于同一层级，保证弹窗正常显示
+    if (el.parentNode !== document.body) {
+        document.body.appendChild(el);
+    }
+    el.style.display = 'block';
+    el.classList.add('show');
+    el.removeAttribute('aria-hidden');
+    el.setAttribute('aria-modal', 'true');
+    var backdrop = document.getElementById('caseModalBackdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.id = 'caseModalBackdrop';
+        backdrop.className = 'modal-backdrop fade show';
+        document.body.appendChild(backdrop);
+        backdrop.addEventListener('click', hideCaseModal);
+    }
+    document.body.classList.add('modal-open');
+    document.addEventListener('keydown', caseModalEsc);
+}
+
+function hideCaseModal() {
+    var el = document.getElementById('caseModal');
+    if (!el) return;
+    el.classList.remove('show');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    var backdrop = document.getElementById('caseModalBackdrop');
+    if (backdrop) { backdrop.remove(); }
+    document.body.classList.remove('modal-open');
+    document.removeEventListener('keydown', caseModalEsc);
+}
+
+function caseModalEsc(e) {
+    if (e.key === 'Escape') { hideCaseModal(); }
+}
+
+var caseModalEl = document.getElementById('caseModal');
+if (caseModalEl) {
+    caseModalEl.addEventListener('click', function (e) {
+        if (e.target.closest('[data-bs-dismiss="modal"]')) { hideCaseModal(); }
+    });
+}
 
 function openCaseModal() {
     document.getElementById('caseId').value = 0;
@@ -389,7 +491,7 @@ function openCaseModal() {
     document.getElementById('caseOutput').value = '';
     document.getElementById('caseEnabled').checked = true;
     document.getElementById('caseModalTitle').textContent = '添加测试用例';
-    new bootstrap.Modal(document.getElementById('caseModal')).show();
+    showCaseModal();
 }
 
 function editCase(id) {
@@ -407,7 +509,7 @@ function editCase(id) {
     document.getElementById('caseOutput').value = item.output || '';
     document.getElementById('caseEnabled').checked = parseInt(item.enabled) === 1;
     document.getElementById('caseModalTitle').textContent = '编辑测试用例';
-    new bootstrap.Modal(document.getElementById('caseModal')).show();
+    showCaseModal();
 }
 
 function saveCase() {

@@ -12,12 +12,17 @@ if (php_sapi_name() === 'cli-server') {
 
 // PHP 原生 Session (必须在所有输出之前启动)
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        ini_set('session.cookie_secure', '1');
+    }
     session_start();
 }
 
 $app = new App();
-// 本地开发开启 debug，宝塔部署前注释掉下行
-$app->debug(true);
+// 仅 PHP 内置服务器（本地开发）默认开启 debug，线上读取 .env 的 app_debug，缺省关闭
+$app->debug((bool) \think\facade\Env::get('app_debug', php_sapi_name() === 'cli-server'));
 
 $http = $app->http;
 $response = $http->run();

@@ -18,7 +18,10 @@ class AdminAuth
             if ($request->isAjax() || $request->isJson()) {
                 return json(['code' => 401, 'msg' => '未登录，请先登录']);
             }
-            return redirect('/admin/login');
+            // 从判题管理进入时带上来源，登录后回到判题系统而不是抽题系统
+            $path = strtolower(trim($request->pathinfo(), '/'));
+            $isOj = strpos($path, 'admin/oj') === 0;
+            return redirect($isOj ? '/admin/login?from=oj' : '/admin/login');
         }
         return $next($request);
     }

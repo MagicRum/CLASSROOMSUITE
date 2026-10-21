@@ -115,6 +115,9 @@ html[data-theme="light"] .table-hover > tbody > tr:hover > * {
     --bs-table-bg-state: rgba(124, 58, 237, .06);
 }
 
+/* 列表表格在窄屏横向滚动，避免撑破卡片 */
+.card-body.p-0 { overflow-x: auto; }
+
 /* ---------- 亮色：表单 ---------- */
 html[data-theme="light"] .form-control,
 html[data-theme="light"] .form-select {

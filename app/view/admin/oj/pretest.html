@@ -1,5 +1,11 @@
 {extend name="admin/layout/index" /}
 {block name="title"}预评测 - {$problem.title}{/block}
+{block name="head"}
+<style>
+    #monacoHost { height: 440px; }
+    #codeFallback { font-family: Consolas, monospace; font-size: 13px; border-radius: 0; background: #1a1a1f; color: #e5e7eb; }
+</style>
+{/block}
 {block name="content"}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
@@ -16,16 +22,17 @@
                 <span><i class="bi bi-code-slash"></i> 测试代码</span>
                 <div class="d-flex gap-2 align-items-center">
                     <select id="langSelect" class="form-select form-select-sm" style="width:150px;">
-                        {volist name="languageMap" id="lang" key="code"}
-                        {if in_array($code, explode(',', $problem.languages))}
-                        <option value="{$code}">{$lang.name}</option>
+                        {volist name="languageMap" id="lang"}
+                        {if in_array($key, explode(',', $problem.languages))}
+                        <option value="{$key}">{$lang.name}</option>
                         {/if}
                         {/volist}
                     </select>
                 </div>
             </div>
             <div class="card-body p-0">
-                <textarea id="codeInput" class="form-control border-0" rows="20" style="font-family:Consolas,monospace;font-size:13px;border-radius:0;background:#1a1a1f;"></textarea>
+                <div id="monacoHost" style="display:none;"></div>
+                <textarea id="codeFallback" class="form-control border-0" rows="20"></textarea>
             </div>
             <div class="card-footer d-flex justify-content-between align-items-center">
                 <span class="text-muted small">预评测不会计入学生成绩</span>
@@ -72,7 +79,17 @@
 </div>
 {/block}
 {block name="js"}
+<script>window.MONACO_BASE = '/static/monaco/vs';</script>
+<script src="/static/monaco/vs/loader.js"
+        onerror="window.MONACO_BASE='https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs';var s=document.createElement('script');s.src=window.MONACO_BASE+'/loader.js';document.head.appendChild(s);"></script>
 <script>
+var LANG_INFO = {
+    c:      {monaco: 'c',          file: 'main.c'},
+    cpp:    {monaco: 'cpp',        file: 'main.cpp'},
+    python: {monaco: 'python',     file: 'main.py'},
+    js:     {monaco: 'javascript', file: 'main.js'}
+};
+
 var STATUS_MAP = {
     pending: ['排队中', 'bg-secondary'],
     judging: ['判题中', 'bg-info'],
@@ -92,8 +109,53 @@ function setStatus(status) {
     badge.textContent = info[0];
 }
 
+var monacoEditor = null;
+
+function fallbackEl() { return document.getElementById('codeFallback'); }
+function getCode() { return monacoEditor ? monacoEditor.getValue() : fallbackEl().value; }
+function currentLang() { return document.getElementById('langSelect').value; }
+
+function initMonaco(retry) {
+    retry = retry || 0;
+    if (typeof require === 'undefined') {
+        if (retry < 20) {
+            setTimeout(function () { initMonaco(retry + 1); }, 400);
+        }
+        return;
+    }
+    require.config({ paths: { 'vs': window.MONACO_BASE || 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+        var value = fallbackEl().value;
+        document.getElementById('monacoHost').style.display = '';
+        fallbackEl().style.display = 'none';
+        monacoEditor = monaco.editor.create(document.getElementById('monacoHost'), {
+            value: value,
+            language: LANG_INFO[currentLang()] ? LANG_INFO[currentLang()].monaco : 'plaintext',
+            theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'vs' : 'vs-dark',
+            fontSize: 13,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            tabSize: 4,
+            wordWrap: 'on'
+        });
+        document.addEventListener('themechange', function (e) {
+            if (monacoEditor) {
+                monaco.editor.setTheme(e.detail.theme === 'light' ? 'vs' : 'vs-dark');
+            }
+        });
+    });
+}
+
+document.getElementById('langSelect').addEventListener('change', function () {
+    var lang = this.value;
+    if (monacoEditor) {
+        monaco.editor.setModelLanguage(monacoEditor.getModel(), LANG_INFO[lang] ? LANG_INFO[lang].monaco : 'plaintext');
+    }
+});
+
 function runPretest() {
-    var code = document.getElementById('codeInput').value;
+    var code = getCode();
     if (!code.trim()) {
         showAlert('请输入测试代码', 'warning');
         return;
@@ -160,7 +222,7 @@ function renderCases(cases) {
         var c = cases[i];
         var info = STATUS_MAP[c.status] || [c.status, 'bg-secondary'];
         html += '<tr>'
-            + '<td class="small">' + escapeHtml(c.name) + '<div class="text-muted">' + (c.type == 1 ? '样例' : '隐藏') + '</div></td>'
+            + '<td class="small">' + escapeHtml(c.name) + '<div class="text-muted">' + (c.type == 1 ? '样例' : (c.type == 3 ? '随机' : '隐藏')) + '</div></td>'
             + '<td><span class="badge ' + info[1] + '">' + info[0] + '</span></td>'
             + '<td class="small">' + c.time + ' ms</td>'
             + '<td class="small">' + c.score + '</td>'
@@ -177,5 +239,7 @@ function escapeHtml(text) {
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+
+initMonaco();
 </script>
 {/block}
