@@ -1,0 +1,156 @@
+{extend name="admin/layout/index" /}
+{block name="title"}题目管理{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">题目管理</h4>
+        <div class="text-muted small">维护题干、评测参数与测试用例，支持预评测后再上架</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/admin/oj/category" class="btn btn-outline-secondary btn-sm"><i class="bi bi-folder2"></i> 题库分类</a>
+        <a href="/admin/oj/problem/edit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> 新增题目</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form class="row g-2 align-items-end" method="get" action="/admin/oj/problem">
+            <div class="col-md-3">
+                <label class="form-label small">关键词</label>
+                <input type="text" name="keyword" class="form-control form-control-sm" value="{$keyword}" placeholder="题目标题">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">分类</label>
+                <select name="category_id" class="form-select form-select-sm">
+                    <option value="0">全部分类</option>
+                    {volist name="categories" id="cat"}
+                    <option value="{$cat.id}" {if $category_id == $cat.id}selected{/if}>{$cat.name}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">难度</label>
+                <select name="difficulty" class="form-select form-select-sm">
+                    <option value="0">全部难度</option>
+                    {volist name="difficultyMap" id="label" key="level"}
+                    <option value="{$key}" {if $difficulty == $key}selected{/if}>{$label}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">状态</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    <option value="1" {if $status === '1'}selected{/if}>已上架</option>
+                    <option value="0" {if $status === '0'}selected{/if}>已下架</option>
+                </select>
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i> 筛选</button>
+                <a href="/admin/oj/problem" class="btn btn-outline-secondary btn-sm">重置</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th width="60">ID</th>
+                    <th>题目</th>
+                    <th width="110">分类</th>
+                    <th width="80">难度</th>
+                    <th width="120">语言</th>
+                    <th width="80">用例</th>
+                    <th width="120">提交 / AC率</th>
+                    <th width="80">状态</th>
+                    <th width="220">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="list" id="item"}
+                <tr>
+                    <td>{$item.id}</td>
+                    <td>
+                        <a href="/admin/oj/problem/edit?id={$item.id}" class="text-decoration-none">{$item.title}</a>
+                        {if $item.tags}<div class="text-muted small">{$item.tags}</div>{/if}
+                    </td>
+                    <td class="text-muted small">{$categoryMap[$item['category_id']]}</td>
+                    <td>
+                        {if $item.difficulty == 1}<span class="badge bg-success">简单</span>{/if}
+                        {if $item.difficulty == 2}<span class="badge bg-warning text-dark">中等</span>{/if}
+                        {if $item.difficulty == 3}<span class="badge bg-danger">困难</span>{/if}
+                    </td>
+                    <td class="text-muted small">{$item.languages}</td>
+                    <td>{$caseCounts[$item['id']]}</td>
+                    <td class="small">
+                        {$subStats[$item['id']]['total']} 次
+                        {if $subStats[$item['id']]['total'] > 0}
+                        / {$subStats[$item['id']]['ac']} AC
+                        {/if}
+                    </td>
+                    <td>
+                        {if $item.is_public == 1}
+                        <span class="badge bg-primary">已上架</span>
+                        {else /}
+                        <span class="badge bg-secondary">已下架</span>
+                        {/if}
+                    </td>
+                    <td>
+                        <a href="/admin/oj/problem/edit?id={$item.id}" class="btn btn-sm btn-outline-primary" title="编辑"><i class="bi bi-pencil"></i></a>
+                        <a href="/admin/oj/pretest?problem_id={$item.id}" class="btn btn-sm btn-outline-info" title="预评测"><i class="bi bi-play-circle"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" title="复制" onclick="copyItem({$item.id})"><i class="bi bi-files"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" title="上下架" onclick="toggleItem({$item.id}, {$item.is_public})"><i class="bi bi-toggle-on"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" title="删除" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+                {/volist}
+                {if $list->isEmpty()}
+                <tr><td colspan="9" class="text-center text-muted py-4">暂无题目，点击右上角「新增题目」开始录入</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+    {if $list->total() > 0}
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <span class="text-muted small">共 {$list->total()} 道题目</span>
+        {$list->render()|raw}
+    </div>
+    {/if}
+</div>
+{/block}
+{block name="js"}
+<script>
+function copyItem(id) {
+    fetch('/admin/oj/problem/copy', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'id=' + id})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+            if (d.code === 1 && d.url) setTimeout(function () { location.href = d.url; }, 700);
+        });
+}
+async function toggleItem(id, isPublic) {
+    var action = isPublic == 1 ? '下架' : '上架';
+    if (!await confirmAction('确认' + action + '该题目？', {okText: action})) return;
+    fetch('/admin/oj/problem/toggle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'id=' + id + '&is_public=' + (isPublic == 1 ? 0 : 1)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+        showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+        if (d.code === 1) setTimeout(function () { location.reload(); }, 600);
+    });
+}
+async function delItem(id) {
+    if (!await confirmAction('确认删除该题目？已有学生提交记录的题目无法删除，建议下架。', {danger: true, okText: '删除'})) return;
+    fetch('/admin/oj/problem/delete', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'id=' + id})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+            if (d.code === 1) setTimeout(function () { location.reload(); }, 700);
+        });
+}
+</script>
+{/block}

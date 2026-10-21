@@ -1,0 +1,475 @@
+{extend name="student/layout/index" /}
+{block name="title"}{$problem.title} - 在线判题{/block}
+{block name="head"}
+<link href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" rel="stylesheet">
+<style>
+    .oj-statement { font-size: 14px; line-height: 1.85; color: rgba(255,255,255,.82); }
+    .oj-statement img { max-width: 100%; border-radius: 8px; }
+    .oj-statement p { margin-bottom: .7rem; }
+    .oj-statement pre {
+        background: #0E0E11; border: 1px solid rgba(255,255,255,.09); border-radius: 8px;
+        padding: 12px 14px; color: rgba(255,255,255,.82);
+        font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+        font-size: 13px; line-height: 1.6; white-space: pre-wrap;
+    }
+    .oj-statement code { color: #C084FC; background: rgba(168,85,247,.1); padding: 1px 5px; border-radius: 4px; }
+    .oj-statement blockquote { border-left: 3px solid rgba(168,85,247,.5); margin: .6rem 0; padding-left: 12px; color: rgba(255,255,255,.6); }
+    .oj-label {
+        font-size: 12px; letter-spacing: 1px; color: rgba(255,255,255,.45);
+        margin: 18px 0 8px;
+    }
+    .oj-box {
+        background: #0E0E11; border: 1px solid rgba(255,255,255,.09); border-radius: 8px;
+        padding: 12px 14px; color: rgba(255,255,255,.82);
+        font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+        font-size: 13px; line-height: 1.65;
+        white-space: pre-wrap; overflow-wrap: anywhere;
+        max-height: 240px; overflow: auto;
+    }
+    .oj-code-pre {
+        background: #0E0E11; border: 1px solid rgba(255,255,255,.09); border-radius: 8px;
+        padding: 12px 14px; color: rgba(255,255,255,.82);
+        font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+        font-size: 12.5px; line-height: 1.6;
+        white-space: pre-wrap; overflow-wrap: anywhere;
+        max-height: 220px; overflow: auto;
+    }
+    #monacoHost { height: 440px; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; overflow: hidden; }
+    .oj-textarea {
+        height: 440px !important; resize: vertical;
+        font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+        font-size: 13px; line-height: 1.6; tab-size: 4;
+    }
+    .oj-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .oj-result-status { font-size: 15px; font-weight: 600; }
+    .oj-case-table td, .oj-case-table th { font-size: 12.5px; }
+    .oj-cases-detail { margin: 8px 0 0; }
+    @media (min-width: 1200px) {
+        .oj-editor-col { position: sticky; top: 20px; }
+    }
+</style>
+{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">{$problem.title}</h4>
+        <div class="text-muted small">
+            {if $problem.difficulty == 1}简单{/if}
+            {if $problem.difficulty == 2}中等{/if}
+            {if $problem.difficulty == 3}困难{/if}
+            · 时间限制 {$problem.time_limit} ms · 内存限制 {:round($problem.memory_limit / 1024, 0)} MB · 满分 {$problem.total_score}
+            {if $problem.tags}· {$problem.tags}{/if}
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/oj" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> 返回题库</a>
+        <a href="/oj/records" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock-history"></i> 我的提交</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>题目描述</span>
+                <span class="text-muted small">
+                    我的最高分 <span class="text-white">{$best}</span> / {$problem.total_score}
+                    {if $myCount > 0}（{$myCount} 次提交）{/if}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="oj-statement" id="problemDesc">{$problem.description|raw}</div>
+
+                {if $problem.input_desc}
+                <div class="oj-label">输入说明</div>
+                <div class="oj-statement">{$problem.input_desc|raw}</div>
+                {/if}
+                {if $problem.output_desc}
+                <div class="oj-label">输出说明</div>
+                <div class="oj-statement">{$problem.output_desc|raw}</div>
+                {/if}
+
+                {if $samples}
+                <div class="oj-label">样例</div>
+                {volist name="samples" id="sample" key="idx"}
+                <div class="mb-2">
+                    <div class="text-muted small mb-1">样例 {$idx}{if $sample.name} · {$sample.name}{/if}</div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">输入</div>
+                            <div class="oj-box">{$sample.input|htmlentities}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">输出</div>
+                            <div class="oj-box">{$sample.output|htmlentities}</div>
+                        </div>
+                    </div>
+                </div>
+                {/volist}
+                {/if}
+
+                {if $problem.hint}
+                <div class="oj-label">提示</div>
+                <div class="oj-statement">{$problem.hint|raw}</div>
+                {/if}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="oj-editor-col">
+            <div class="card">
+                <div class="card-header">
+                    <div class="oj-toolbar">
+                        <span>代码编辑</span>
+                        <select id="langSelect" class="form-select form-select-sm" style="width:auto;">
+                            {volist name="allowed" id="code"}
+                            <option value="{$code}" {if !isset($available[$code]) || empty($available[$code])}data-unavailable="1"{/if}>
+                                {$languageMap[$code]['name']}{if !isset($available[$code]) || empty($available[$code])}（环境未就绪）{/if}
+                            </option>
+                            {/volist}
+                        </select>
+                        <span class="text-muted small ms-auto" id="saveHint">代码会自动保存到本机</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="monacoHost" style="display:none;"></div>
+                    <textarea id="codeFallback" class="form-control oj-textarea" spellcheck="false"></textarea>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <button type="button" class="btn btn-primary btn-sm" id="btnSubmit" onclick="submitCode(false)">
+                            <i class="bi bi-send"></i> 提交评测
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRun" onclick="submitCode(true)">
+                            <i class="bi bi-play"></i> 样例自测
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetCode()">
+                            <i class="bi bi-arrow-counterclockwise"></i> 恢复模板
+                        </button>
+                    </div>
+                    <div class="text-muted small mt-2">样例自测只运行公开样例，不计入成绩与提交统计。</div>
+                </div>
+            </div>
+
+            <div class="card mt-3" id="resultCard" style="display:none;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>评测结果</span>
+                    <span class="text-muted small" id="resultId"></span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                        <span class="oj-result-status" id="resultStatus">排队中</span>
+                        <span class="text-muted small" id="resultScore"></span>
+                        <span class="text-muted small" id="resultTime"></span>
+                        <span class="text-muted small" id="resultMemory"></span>
+                    </div>
+                    <div id="compileLogWrap" style="display:none;">
+                        <div class="text-muted small mb-1">编译 / 运行日志</div>
+                        <pre class="oj-code-pre" id="compileLog"></pre>
+                    </div>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-hover oj-case-table mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th width="50">#</th>
+                                    <th>用例</th>
+                                    <th width="70">类型</th>
+                                    <th width="90">状态</th>
+                                    <th width="80">耗时</th>
+                                    <th width="90">内存</th>
+                                    <th width="60">得分</th>
+                                </tr>
+                            </thead>
+                            <tbody id="caseBody">
+                                <tr><td colspan="7" class="text-center text-muted py-3">等待判题结果</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+var PROBLEM_ID = {$problem.id};
+var LANG_INFO = <?php
+    $langInfo = [];
+    foreach ($allowed as $code) {
+        $langInfo[$code] = [
+            'name' => $languageMap[$code]['name'],
+            'monaco' => $languageMap[$code]['monaco'],
+            'available' => !empty($available[$code]),
+        ];
+    }
+    echo json_encode($langInfo, JSON_UNESCAPED_UNICODE);
+?>;
+var TEMPLATES = {
+    c: '#include <stdio.h>\n\nint main() {\n    \n    return 0;\n}\n',
+    cpp: '#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n',
+    python: '# 在此编写代码\n',
+    js: '// 在此编写代码\n'
+};
+var STATUS_TEXT = {
+    pending: '排队中', judging: '判题中', ac: '答案正确', ce: '编译错误',
+    wa: '答案错误', tle: '运行超时', mle: '内存超限', re: '运行错误', se: '系统错误'
+};
+
+var monacoEditor = null;
+var currentLang = null;
+var pollTimer = null;
+var pollCount = 0;
+
+function fallbackEl() { return document.getElementById('codeFallback'); }
+
+function getCode() {
+    return monacoEditor ? monacoEditor.getValue() : fallbackEl().value;
+}
+function setCode(value) {
+    if (monacoEditor) { monacoEditor.setValue(value); } else { fallbackEl().value = value; }
+}
+function storageKey(lang) { return 'oj_code_' + PROBLEM_ID + '_' + lang; }
+
+function loadCode(lang) {
+    var saved = null;
+    try { saved = localStorage.getItem(storageKey(lang)); } catch (e) {}
+    if (saved === null || saved === '') {
+        saved = TEMPLATES[lang] || '';
+    }
+    setCode(saved);
+}
+function saveCode() {
+    if (!currentLang) return;
+    try { localStorage.setItem(storageKey(currentLang), getCode()); } catch (e) {}
+    var hint = document.getElementById('saveHint');
+    hint.textContent = '已保存到本机';
+    setTimeout(function () { hint.textContent = '代码会自动保存到本机'; }, 1200);
+}
+
+function initMonaco() {
+    if (typeof require === 'undefined') { return; }
+    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+        var value = fallbackEl().value;
+        document.getElementById('monacoHost').style.display = '';
+        fallbackEl().style.display = 'none';
+        monacoEditor = monaco.editor.create(document.getElementById('monacoHost'), {
+            value: value,
+            language: LANG_INFO[currentLang] ? LANG_INFO[currentLang].monaco : 'plaintext',
+            theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'vs' : 'vs-dark',
+            fontSize: 13,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            tabSize: 4,
+            wordWrap: 'on'
+        });
+        monacoEditor.onDidChangeModelContent(function () {
+            clearTimeout(monacoEditor._saveTimer);
+            monacoEditor._saveTimer = setTimeout(saveCode, 800);
+        });
+        document.addEventListener('themechange', function (e) {
+            if (monacoEditor) {
+                monaco.editor.setTheme(e.detail.theme === 'light' ? 'vs' : 'vs-dark');
+            }
+        });
+    });
+}
+
+function switchLang(lang) {
+    if (currentLang) saveCode();
+    currentLang = lang;
+    loadCode(lang);
+    if (monacoEditor) {
+        monaco.editor.setModelLanguage(monacoEditor.getModel(), LANG_INFO[lang] ? LANG_INFO[lang].monaco : 'plaintext');
+    }
+    var opt = document.getElementById('langSelect').selectedOptions[0];
+    if (opt && opt.dataset.unavailable === '1') {
+        showAlert('当前服务器未安装该语言的运行环境，仍可编写但无法评测', 'warning');
+    }
+}
+
+function resetCode() {
+    if (!currentLang) return;
+    setCode(TEMPLATES[currentLang] || '');
+    saveCode();
+    showAlert('已恢复默认代码模板', 'info');
+}
+
+function badgeClass(status) {
+    if (status === 'ac') return 'bg-success';
+    if (status === 'pending' || status === 'judging') return 'bg-info text-dark';
+    if (status === 'ce') return 'bg-warning text-dark';
+    return 'bg-danger';
+}
+
+function escapeHtml(text) {
+    return String(text === null || text === undefined ? '' : text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function submitCode(isTest) {
+    var lang = currentLang || document.getElementById('langSelect').value;
+    var code = getCode();
+    if (code.trim() === '') { showAlert('代码不能为空', 'danger'); return; }
+    if (LANG_INFO[lang] && !LANG_INFO[lang].available) {
+        showAlert('当前服务器未安装该语言的运行环境，请联系教师', 'danger');
+        return;
+    }
+    saveCode();
+
+    var btnSubmit = document.getElementById('btnSubmit');
+    var btnRun = document.getElementById('btnRun');
+    btnSubmit.disabled = true;
+    btnRun.disabled = true;
+
+    var body = new URLSearchParams();
+    body.append('problem_id', PROBLEM_ID);
+    body.append('language', lang);
+    body.append('code', code);
+
+    fetch(isTest ? '/oj/run' : '/oj/submit', { method: 'POST', body: body })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (d.code !== 1) {
+                btnSubmit.disabled = false;
+                btnRun.disabled = false;
+                showAlert(d.msg || '提交失败', 'danger');
+                return;
+            }
+            showAlert(isTest ? '已提交样例自测' : '已提交评测', 'success');
+            startPolling(d.data.id, isTest);
+        })
+        .catch(function () {
+            btnSubmit.disabled = false;
+            btnRun.disabled = false;
+            showAlert('网络异常，提交失败', 'danger');
+        });
+}
+
+function startPolling(id, isTest) {
+    if (pollTimer) clearInterval(pollTimer);
+    pollCount = 0;
+    var card = document.getElementById('resultCard');
+    card.style.display = '';
+    document.getElementById('resultId').textContent = (isTest ? '样例自测' : '正式提交') + ' #' + id;
+    document.getElementById('resultStatus').textContent = '排队中';
+    document.getElementById('resultStatus').className = 'oj-result-status text-info';
+    document.getElementById('resultScore').textContent = '';
+    document.getElementById('resultTime').textContent = '';
+    document.getElementById('resultMemory').textContent = '';
+    document.getElementById('compileLogWrap').style.display = 'none';
+    document.getElementById('caseBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">等待判题结果</td></tr>';
+
+    function tick() {
+        pollCount++;
+        fetch('/oj/status?id=' + id)
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.code !== 1) {
+                    clearInterval(pollTimer);
+                    finishButtons();
+                    showAlert(d.msg || '查询判题状态失败', 'danger');
+                    return;
+                }
+                renderResult(d.data);
+                if (d.data.status !== 'pending' && d.data.status !== 'judging') {
+                    clearInterval(pollTimer);
+                    finishButtons();
+                } else if (pollCount > 180) {
+                    clearInterval(pollTimer);
+                    finishButtons();
+                    showAlert('判题时间较长，请稍后到「我的提交」查看结果', 'warning');
+                }
+            })
+            .catch(function () {
+                if (pollCount > 20) {
+                    clearInterval(pollTimer);
+                    finishButtons();
+                }
+            });
+    }
+
+    tick();
+    pollTimer = setInterval(tick, 800);
+}
+
+function finishButtons() {
+    document.getElementById('btnSubmit').disabled = false;
+    document.getElementById('btnRun').disabled = false;
+}
+
+function renderResult(data) {
+    var statusEl = document.getElementById('resultStatus');
+    statusEl.textContent = data.status_text || STATUS_TEXT[data.status] || data.status;
+    statusEl.className = 'oj-result-status ' + (data.status === 'ac' ? 'text-success' : (data.status === 'pending' || data.status === 'judging' ? 'text-info' : 'text-danger'));
+    document.getElementById('resultScore').textContent = '得分 ' + data.score;
+    document.getElementById('resultTime').textContent = '最大耗时 ' + data.time_used + ' ms';
+    document.getElementById('resultMemory').textContent = '最大内存 ' + data.memory_used + ' KB';
+
+    var logWrap = document.getElementById('compileLogWrap');
+    if (data.compile_log) {
+        logWrap.style.display = '';
+        document.getElementById('compileLog').textContent = data.compile_log;
+    } else {
+        logWrap.style.display = 'none';
+    }
+
+    var body = document.getElementById('caseBody');
+    if (!data.cases || data.cases.length === 0) {
+        body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">'
+            + (data.status === 'pending' || data.status === 'judging' ? '等待判题结果' : '无可用测试用例') + '</td></tr>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < data.cases.length; i++) {
+        var c = data.cases[i];
+        var hasDetail = (c.input !== '' || c.output !== '' || c.expected !== '');
+        html += '<tr>'
+            + '<td>' + (i + 1) + '</td>'
+            + '<td>' + escapeHtml(c.name) + (hasDetail ? '<div class="oj-cases-detail text-muted">'
+                + '<details><summary class="small">查看输入 / 期望 / 实际</summary>'
+                + '<div class="small mt-1">输入</div><pre class="oj-code-pre mb-1">' + escapeHtml(c.input) + '</pre>'
+                + '<div class="small">期望输出</div><pre class="oj-code-pre mb-1">' + escapeHtml(c.expected) + '</pre>'
+                + '<div class="small">实际输出</div><pre class="oj-code-pre mb-0">' + escapeHtml(c.output) + '</pre>'
+                + '</details></div>' : '') + '</td>'
+            + '<td>' + (c.type === 1 ? '<span class="badge bg-primary">样例</span>' : '<span class="badge bg-secondary">隐藏</span>') + '</td>'
+            + '<td><span class="badge ' + badgeClass(c.status) + '">' + (STATUS_TEXT[c.status] || c.status) + '</span></td>'
+            + '<td>' + c.time + ' ms</td>'
+            + '<td>' + c.memory + ' KB</td>'
+            + '<td>' + c.score + '</td>'
+            + '</tr>';
+    }
+    body.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var select = document.getElementById('langSelect');
+    currentLang = select.value;
+    loadCode(currentLang);
+    select.addEventListener('change', function () { switchLang(this.value); });
+    fallbackEl().addEventListener('input', function () {
+        clearTimeout(fallbackEl()._saveTimer);
+        fallbackEl()._saveTimer = setTimeout(saveCode, 800);
+    });
+    initMonaco();
+
+    if (window.renderMathInElement) {
+        try {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true }
+                ],
+                throwOnError: false
+            });
+        } catch (e) {}
+    }
+});
+</script>
+{/block}

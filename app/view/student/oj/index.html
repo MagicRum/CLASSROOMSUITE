@@ -1,0 +1,106 @@
+{extend name="student/layout/index" /}
+{block name="title"}在线判题{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">题库</h4>
+        <div class="text-muted small">选择题目开始作答，提交后可查看逐用例评测结果</div>
+    </div>
+    <a href="/oj/records" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock-history"></i> 我的提交</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form class="row g-2 align-items-end" method="get" action="/oj">
+            <div class="col-md-4">
+                <label class="form-label small">关键词</label>
+                <input type="text" name="keyword" class="form-control form-control-sm" value="{$keyword}" placeholder="题目标题">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">分类</label>
+                <select name="category_id" class="form-select form-select-sm">
+                    <option value="0">全部分类</option>
+                    {volist name="categories" id="cat"}
+                    <option value="{$cat.id}" {if $category_id == $cat.id}selected{/if}>{$cat.name}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">难度</label>
+                <select name="difficulty" class="form-select form-select-sm">
+                    <option value="0">全部难度</option>
+                    {volist name="difficultyMap" id="label" key="level"}
+                    <option value="{$key}" {if $difficulty == $key}selected{/if}>{$label}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i> 筛选</button>
+                <a href="/oj" class="btn btn-outline-secondary btn-sm">重置</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th width="70">状态</th>
+                    <th>题目</th>
+                    <th width="110">分类</th>
+                    <th width="90">难度</th>
+                    <th width="110">提交 / 最高分</th>
+                    <th width="80"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php $catMap = [0 => '未分类']; foreach ($categories as $c) { $catMap[intval($c['id'])] = $c['name']; } ?>
+                {volist name="list" id="item"}
+                <tr>
+                    <td>
+                        {if isset($state[$item['id']]) && $state[$item['id']]['ac']}
+                        <span class="badge bg-success">已通过</span>
+                        {elseif isset($state[$item['id']]) && $state[$item['id']]['cnt'] > 0 /}
+                        <span class="badge bg-warning text-dark">尝试过</span>
+                        {else /}
+                        <span class="badge bg-secondary">未尝试</span>
+                        {/if}
+                    </td>
+                    <td>
+                        <a href="/oj/problem?id={$item.id}" class="text-decoration-none">{$item.title}</a>
+                        {if $item.tags}<div class="text-muted small">{$item.tags}</div>{/if}
+                    </td>
+                    <td class="text-muted small">{$catMap[$item['category_id']]}</td>
+                    <td>
+                        {if $item.difficulty == 1}<span class="badge bg-success">简单</span>{/if}
+                        {if $item.difficulty == 2}<span class="badge bg-warning text-dark">中等</span>{/if}
+                        {if $item.difficulty == 3}<span class="badge bg-danger">困难</span>{/if}
+                    </td>
+                    <td class="small">
+                        {if isset($state[$item['id']])}
+                        {$state[$item['id']]['cnt']} 次 / {$state[$item['id']]['best']} 分
+                        {else /}
+                        <span class="text-muted">-</span>
+                        {/if}
+                    </td>
+                    <td>
+                        <a href="/oj/problem?id={$item.id}" class="btn btn-sm btn-outline-primary">作答</a>
+                    </td>
+                </tr>
+                {/volist}
+                {if $list->isEmpty()}
+                <tr><td colspan="6" class="text-center text-muted py-4">暂无已上架题目</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+    {if $list->total() > 0}
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <span class="text-muted small">共 {$list->total()} 道题目</span>
+        {$list->render()|raw}
+    </div>
+    {/if}
+</div>
+{/block}

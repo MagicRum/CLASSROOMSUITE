@@ -1,0 +1,113 @@
+{extend name="admin/layout/index" /}
+{block name="title"}题库分类{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">题库分类</h4>
+        <div class="text-muted small">按课程、章节组织题库，例如「数据结构」「C 语言程序设计」</div>
+    </div>
+    <a href="/admin/oj/problem" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> 返回题目管理</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form id="catForm" class="row g-2 align-items-end">
+            <input type="hidden" name="id" id="catId" value="0">
+            <div class="col-md-4">
+                <label class="form-label small">分类名称</label>
+                <input type="text" name="name" id="catName" class="form-control" placeholder="如 数据结构" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">上级分类</label>
+                <select name="parent_id" id="catParent" class="form-select">
+                    <option value="0">无（一级分类）</option>
+                    {volist name="list" id="cat"}
+                    <option value="{$cat.id}">{$cat.name}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">排序</label>
+                <input type="number" name="sort" id="catSort" class="form-control" value="0">
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> <span id="catSubmitText">添加分类</span></button>
+                <button type="button" class="btn btn-outline-secondary" id="catCancel" style="display:none;" onclick="resetCat()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th width="70">ID</th>
+                    <th>分类名称</th>
+                    <th width="120">题目数</th>
+                    <th width="90">排序</th>
+                    <th width="140">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="list" id="item"}
+                <tr>
+                    <td>{$item.id}</td>
+                    <td>
+                        {if $item.parent_id > 0}<span class="text-muted">└ </span>{/if}{$item.name}
+                    </td>
+                    <td><span class="badge bg-primary">{$item.problem_count}</span></td>
+                    <td>{$item.sort}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCat({$item.id}, '{$item.name|raw}', {$item.parent_id}, {$item.sort})"><i class="bi bi-pencil"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="delCat({$item.id})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+                {/volist}
+                {if empty($list)}
+                <tr><td colspan="5" class="text-center text-muted py-4">暂无分类，请先添加课程或章节分类</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script>
+document.getElementById('catForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    fetch('/admin/oj/category/save', {method: 'POST', body: new FormData(this)})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+            if (d.code === 1) setTimeout(function () { location.reload(); }, 700);
+        });
+});
+function editCat(id, name, parentId, sort) {
+    document.getElementById('catId').value = id;
+    document.getElementById('catName').value = name;
+    document.getElementById('catParent').value = parentId;
+    document.getElementById('catSort').value = sort;
+    document.getElementById('catSubmitText').textContent = '保存修改';
+    document.getElementById('catCancel').style.display = '';
+}
+function resetCat() {
+    document.getElementById('catId').value = 0;
+    document.getElementById('catName').value = '';
+    document.getElementById('catParent').value = 0;
+    document.getElementById('catSort').value = 0;
+    document.getElementById('catSubmitText').textContent = '添加分类';
+    document.getElementById('catCancel').style.display = 'none';
+}
+async function delCat(id) {
+    if (!await confirmAction('确认删除该分类？分类下有题目时无法删除。', {danger: true, okText: '删除'})) return;
+    fetch('/admin/oj/category/delete', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'id=' + id})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+            if (d.code === 1) setTimeout(function () { location.reload(); }, 700);
+        });
+}
+</script>
+{/block}

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{block name="title"}抽题系统{/block}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/400.css" rel="stylesheet">
@@ -54,26 +55,31 @@
 
         /* ===== JetBrains 风侧边栏 ===== */
         .sidebar {
-            min-height: 100vh;
+            height: 100vh; min-height: 100vh;
             background: #0B0B0D;
             border-right: 1px solid var(--jb-border);
-            position: relative;
+            position: sticky; top: 0; align-self: flex-start;
+            overflow-y: auto; overflow-x: hidden;
+            display: flex; flex-direction: column;
         }
+        .sidebar > * { flex: 0 0 auto; }
         .side-logo {
-            display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
-            padding: 18px 22px 16px;
+            display: flex; flex-direction: column; align-items: flex-start; gap: 9px;
+            padding: 22px 22px 16px;
             border-bottom: 1px solid var(--jb-border);
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
+        .brand-lockup { display: flex; align-items: center; gap: 10px; }
+        .brand-glyph { width: 26px; height: 26px; flex: none; display: block; color: var(--jb-text); }
         .side-logo .logo-wordmark {
             font-family: "Space Grotesk", "Inter", sans-serif;
-            font-size: 24px; font-weight: 700; letter-spacing: 4px;
-            color: #fff; line-height: 1;
+            font-size: 20px; font-weight: 700; letter-spacing: .1em;
+            color: var(--jb-text); line-height: 1;
         }
-        .side-logo .logo-wordmark em { color: #A855F7; font-style: normal; }
         .side-logo .logo-name {
-            color: var(--jb-text-dim); font-size: 11px;
-            letter-spacing: 3px; white-space: nowrap;
+            color: var(--jb-text-faint); font-size: 10.5px;
+            letter-spacing: .26em; white-space: nowrap;
+            padding-left: 36px;
         }
 
         .side-section {
@@ -101,7 +107,7 @@
         }
         .sidebar a.active::before { opacity: 1; }
         .side-bottom {
-            position: absolute; bottom: 0; left: 0; right: 0;
+            margin-top: auto;
             border-top: 1px solid var(--jb-border);
             padding-bottom: 8px;
         }
@@ -171,6 +177,30 @@
         .form-control::placeholder { color: var(--jb-text-faint); }
         .form-select option { background: var(--jb-panel-2); color: #fff; }
         .form-label, .form-text { color: var(--jb-text-dim) !important; }
+        /* 复选框 / 单选框：深色主题下的文字与控件对比度 */
+        .form-check-label, .form-check-label.small, .form-check-label.small * { color: var(--jb-text) !important; }
+        .form-check-input {
+            background-color: var(--jb-input);
+            border: 1px solid #6B7075;
+        }
+        .form-check-input:checked {
+            background-color: var(--jb-blue);
+            border-color: var(--jb-blue);
+        }
+        .form-check-input:focus {
+            border-color: var(--jb-blue);
+            box-shadow: 0 0 0 .2rem rgba(168,85,247,.25);
+        }
+        .form-check-input:disabled { opacity: .45; }
+        /* 模态框深色化 */
+        .modal-content {
+            background: var(--jb-panel-2);
+            border: 1px solid rgba(255,255,255,.12);
+            color: var(--jb-text);
+        }
+        .modal-header, .modal-footer { border-color: rgba(255,255,255,.08); }
+        .modal-title { color: #fff; }
+        .modal-backdrop.show { opacity: .6; }
 
         .btn { border-radius: 8px; font-weight: 500; transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease; }
         .btn-primary { background: var(--jb-blue); border-color: var(--jb-blue); }
@@ -287,18 +317,63 @@
         .btn-danger:hover { background: #F06A62; border-color: #F06A62; }
     </style>
     {block name="head"}{/block}
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <script>try{document.documentElement.setAttribute('data-theme',localStorage.getItem('cs-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}</script>
+    <script src="/static/js/theme.js" defer></script>
 </head>
 <body>
 <div class="container-fluid">
     <div class="row">
         <!-- 侧边栏 -->
         <nav class="col-md-2 d-none d-md-block sidebar p-0">
+            <?php
+            $__seg = explode('/', strtolower(request()->pathinfo()));
+            $cur = $__seg[1] ?? '';
+            $subSeg = $__seg[2] ?? '';
+            $isOj = ($cur === 'oj');
+            ?>
+            <?php if ($isOj): ?>
             <div class="side-logo">
-                <div class="logo-wordmark">QTS<em>.</em></div>
+                <div class="brand-lockup">
+                    <svg class="brand-glyph" viewBox="0 0 40 40" aria-hidden="true">
+                        <rect x="2" y="2" width="36" height="36" rx="9" fill="#A855F7"/>
+                        <path d="M27.3 12.2A11 11 0 1 0 27.3 27.8" fill="none" stroke="#FFFFFF" stroke-width="4.4"/>
+                    </svg>
+                    <span class="logo-wordmark">OJS</span>
+                </div>
+                <div class="logo-name">在线判题系统</div>
+            </div>
+            <div class="side-section">判题管理</div>
+            <a href="/admin/oj/problem" class="<?php echo ($subSeg==='' || $subSeg==='problem' || $subSeg==='pretest') ? 'active' : ''; ?>">
+                <i class="bi bi-journal-code"></i> 题目管理
+            </a>
+            <a href="/admin/oj/category" class="<?php echo $subSeg==='category' ? 'active' : ''; ?>">
+                <i class="bi bi-folder2"></i> 题库分类
+            </a>
+            <a href="/admin/oj/submission" class="<?php echo $subSeg==='submission' ? 'active' : ''; ?>">
+                <i class="bi bi-list-ul"></i> 提交记录
+            </a>
+            <a href="/admin/oj/stats" class="<?php echo $subSeg==='stats' ? 'active' : ''; ?>">
+                <i class="bi bi-bar-chart"></i> 统计分析
+            </a>
+
+            <div class="side-bottom">
+                <a href="/admin/dashboard"><i class="bi bi-arrow-left-right"></i> 抽题系统</a>
+                <a href="/"><i class="bi bi-house"></i> 返回门户</a>
+                <a href="/admin/logout"><i class="bi bi-box-arrow-right"></i> 退出登录</a>
+                <div class="side-producer">软件工程教研室 李嘉哲</div>
+            </div>
+            <?php else: ?>
+            <div class="side-logo">
+                <div class="brand-lockup">
+                    <svg class="brand-glyph" viewBox="0 0 40 40" aria-hidden="true">
+                        <rect x="2" y="2" width="36" height="36" rx="9" fill="#A855F7"/>
+                        <path d="M27.3 12.2A11 11 0 1 0 27.3 27.8" fill="none" stroke="#FFFFFF" stroke-width="4.4"/>
+                    </svg>
+                    <span class="logo-wordmark">QTS</span>
+                </div>
                 <div class="logo-name">抽题系统</div>
             </div>
-            <?php $__seg = explode('/', strtolower(request()->pathinfo())); $cur = $__seg[1] ?? ''; ?>
-
             <div class="side-section">教学工具</div>
             <a href="/admin/Dashboard/index" class="<?php echo $cur==='dashboard' ? 'active' : ''; ?>">
                 <i class="bi bi-speedometer2"></i> 数据概览
@@ -330,10 +405,12 @@
             </a>
 
             <div class="side-bottom">
+                <a href="/admin/oj/problem"><i class="bi bi-box-arrow-up-right"></i> 在线判题系统</a>
                 <a href="/"><i class="bi bi-house"></i> 返回门户</a>
                 <a href="/admin/logout"><i class="bi bi-box-arrow-right"></i> 退出登录</a>
                 <div class="side-producer">软件工程教研室 李嘉哲</div>
             </div>
+            <?php endif; ?>
         </nav>
         <!-- 主内容 -->
         <main class="col-md-10 main-content">

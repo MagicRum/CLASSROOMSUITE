@@ -1,0 +1,131 @@
+{extend name="admin/layout/index" /}
+{block name="title"}提交记录{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">提交记录</h4>
+        <div class="text-muted small">查询全部学生提交，可进入详情查看源码与逐用例结果</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/admin/oj/stats" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bar-chart"></i> 统计分析</a>
+        <a href="/admin/oj/problem" class="btn btn-outline-primary btn-sm"><i class="bi bi-journal-code"></i> 题目管理</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form class="row g-2 align-items-end" method="get" action="/admin/oj/submission">
+            <div class="col-md-2">
+                <label class="form-label small">班级</label>
+                <select name="class_id" class="form-select form-select-sm">
+                    <option value="0">全部班级</option>
+                    {volist name="classes" id="class"}
+                    <option value="{$class.id}" {if $class_id == $class.id}selected{/if}>{$class.class_name}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">题目</label>
+                <select name="problem_id" class="form-select form-select-sm">
+                    <option value="0">全部题目</option>
+                    {volist name="problems" id="p"}
+                    <option value="{$p.id}" {if $problem_id == $p.id}selected{/if}>{$p.title}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">语言</label>
+                <select name="language" class="form-select form-select-sm">
+                    <option value="">全部语言</option>
+                    {volist name="languageMap" id="lang" key="code"}
+                    <option value="{$key}" {if $language === $key}selected{/if}>{$lang.name}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">状态</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">全部状态</option>
+                    {volist name="statusMap" id="label" key="code"}
+                    <option value="{$key}" {if $status === $key}selected{/if}>{$label}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">学号 / 姓名</label>
+                <input type="text" name="keyword" class="form-control form-control-sm" value="{$keyword}" placeholder="模糊搜索">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">开始日期</label>
+                <input type="date" name="start" class="form-control form-control-sm" value="{$start}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">结束日期</label>
+                <input type="date" name="end" class="form-control form-control-sm" value="{$end}">
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i> 筛选</button>
+                <a href="/admin/oj/submission" class="btn btn-outline-secondary btn-sm">重置</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th width="70">ID</th>
+                    <th width="150">学生</th>
+                    <th>题目</th>
+                    <th width="110">语言</th>
+                    <th width="110">状态</th>
+                    <th width="80">得分</th>
+                    <th width="130">耗时 / 内存</th>
+                    <th width="160">提交时间</th>
+                    <th width="80">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="list" id="item"}
+                <tr>
+                    <td>{$item.id}</td>
+                    <td>
+                        <div>{$item.student_name}</div>
+                        <div class="text-muted small">{$item.student_no}</div>
+                    </td>
+                    <td>
+                        <a href="/admin/oj/problem/edit?id={$item.problem_id}" class="text-decoration-none">
+                            {if isset($problemMap[$item['problem_id']])}{$problemMap[$item['problem_id']]}{else /}题目 #{$item.problem_id}{/if}
+                        </a>
+                    </td>
+                    <td class="text-muted small">{if isset($languageMap[$item['language']])}{$languageMap[$item['language']]['name']}{else /}{$item.language}{/if}</td>
+                    <td>
+                        {if $item.status == 'ac'}<span class="badge bg-success">{$statusMap[$item['status']]}</span>
+                        {elseif $item.status == 'pending' || $item.status == 'judging' /}<span class="badge bg-info text-dark">{$statusMap[$item['status']]}</span>
+                        {elseif $item.status == 'ce' /}<span class="badge bg-warning text-dark">{$statusMap[$item['status']]}</span>
+                        {else /}<span class="badge bg-danger">{$statusMap[$item['status']]}</span>{/if}
+                    </td>
+                    <td>{$item.score}</td>
+                    <td class="text-muted small">{$item.time_used} ms / {$item.memory_used} KB</td>
+                    <td class="text-muted small">{$item.create_time}</td>
+                    <td>
+                        <a href="/admin/oj/submission/detail?id={$item.id}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                    </td>
+                </tr>
+                {/volist}
+                {if $list->isEmpty()}
+                <tr><td colspan="9" class="text-center text-muted py-4">暂无提交记录</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+    {if $list->total() > 0}
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <span class="text-muted small">共 {$list->total()} 条记录</span>
+        {$list->render()|raw}
+    </div>
+    {/if}
+</div>
+{/block}

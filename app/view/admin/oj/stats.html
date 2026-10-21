@@ -1,0 +1,296 @@
+{extend name="admin/layout/index" /}
+{block name="title"}统计分析{/block}
+{block name="head"}
+<style>
+    .oj { max-width: 1180px; }
+
+    .oj-head {
+        display: flex; align-items: flex-end; justify-content: space-between; gap: 32px;
+        padding-bottom: 22px; border-bottom: 1px solid var(--jb-border-strong);
+    }
+    .oj-kicker {
+        display: flex; align-items: center; gap: 12px;
+        font-size: 10.5px; letter-spacing: .24em; text-transform: uppercase;
+        color: var(--jb-text-faint);
+    }
+    .oj-kicker::before { content: ''; width: 22px; height: 1px; background: var(--jb-blue); flex: none; }
+    .oj-title {
+        margin: 16px 0 0;
+        font-family: "Space Grotesk", "Inter", sans-serif;
+        font-size: 42px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1;
+        color: var(--jb-text);
+    }
+    .oj-sub {
+        margin: 10px 0 0; max-width: 52ch;
+        font-size: 13px; line-height: 1.7; color: var(--jb-text-dim);
+    }
+    .oj-meta {
+        flex: none; text-align: right;
+        font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+        color: var(--jb-text-faint); line-height: 1.7;
+    }
+    .oj-meta span { display: block; }
+    .oj-meta strong {
+        display: block; margin: 3px 0;
+        font-family: "Space Grotesk", "Inter", sans-serif;
+        font-size: 15px; font-weight: 500; letter-spacing: .06em;
+        color: var(--jb-text-dim);
+    }
+
+    .oj-toolbar {
+        display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 32px;
+        padding: 22px 0; border-bottom: 1px solid var(--jb-border);
+    }
+    .oj-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+    .oj-form-export { margin-left: auto; }
+    .oj-field { display: flex; flex-direction: column; gap: 7px; }
+    .oj-field label {
+        margin: 0; font-size: 10px; letter-spacing: .18em;
+        text-transform: uppercase; color: var(--jb-text-faint);
+    }
+    .oj-field .form-select { min-width: 180px; font-size: 13px; }
+
+    .oj-stats {
+        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-bottom: 1px solid var(--jb-border);
+    }
+    .oj-stat { padding: 34px 28px 32px 0; border-right: 1px solid var(--jb-border); }
+    .oj-stat:nth-child(n+2) { padding-left: 28px; }
+    .oj-stat:last-child { border-right: 0; padding-right: 0; }
+    .oj-stat-no {
+        font-family: "Space Grotesk", "Inter", sans-serif;
+        font-size: 10px; letter-spacing: .2em; color: var(--jb-blue);
+    }
+    .oj-stat-value {
+        margin-top: 20px;
+        font-family: "Space Grotesk", "Inter", sans-serif;
+        font-size: 60px; font-weight: 700; letter-spacing: -.035em; line-height: .95;
+        color: var(--jb-text); font-variant-numeric: tabular-nums;
+    }
+    .oj-stat-label { margin-top: 14px; font-size: 13px; letter-spacing: .04em; color: var(--jb-text-dim); }
+    .oj-stat-en {
+        margin-top: 5px; font-size: 9.5px; letter-spacing: .18em;
+        text-transform: uppercase; color: var(--jb-text-faint);
+    }
+
+    .oj-sec { padding-top: 36px; }
+    .oj-sec-title {
+        display: flex; align-items: center; gap: 10px; margin: 0;
+        font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+        color: var(--jb-text-dim);
+    }
+    .oj-sec-title::before { content: ''; width: 5px; height: 5px; background: var(--jb-blue); flex: none; }
+
+    .oj-table-wrap { margin-top: 14px; overflow-x: auto; }
+    .oj-table { width: 100%; border-collapse: collapse; }
+    .oj-table th {
+        padding: 10px 14px 10px 0; text-align: left; white-space: nowrap;
+        font-size: 10px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase;
+        color: var(--jb-text-faint); border-bottom: 1px solid var(--jb-border-strong);
+    }
+    .oj-table td {
+        padding: 14px 14px 14px 0; font-size: 13px; color: var(--jb-text);
+        border-bottom: 1px solid var(--jb-border); vertical-align: middle;
+    }
+    .oj-table tbody tr:hover td { background: rgba(168, 85, 247, .04); }
+    .oj-num {
+        font-family: "Space Grotesk", "Inter", sans-serif;
+        font-variant-numeric: tabular-nums;
+    }
+    .oj-tag {
+        display: inline-block; margin: 0 6px 4px 0; padding: 2px 8px;
+        font-size: 11px; color: var(--jb-text-dim);
+        border: 1px solid var(--jb-border-strong); border-radius: 3px;
+    }
+    .oj-empty { padding: 48px 0; text-align: center; font-size: 13px; color: var(--jb-text-faint); }
+
+    .oj-foot {
+        display: flex; justify-content: space-between; gap: 16px;
+        margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--jb-border);
+        font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
+        color: var(--jb-text-faint);
+    }
+
+    @media (max-width: 860px) {
+        .oj-head { flex-direction: column; align-items: flex-start; gap: 18px; }
+        .oj-meta { text-align: left; }
+        .oj-title { font-size: 32px; }
+        .oj-form-export { margin-left: 0; }
+        .oj-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .oj-stat {
+            padding: 26px 20px 26px 0;
+            border-right: 1px solid var(--jb-border);
+            border-bottom: 1px solid var(--jb-border);
+        }
+        .oj-stat:nth-child(n+2) { padding-left: 20px; }
+        .oj-stat:nth-child(2n) { border-right: 0; }
+        .oj-stat:nth-child(2n+1) { padding-left: 0; }
+        .oj-stat:nth-child(n+3) { border-bottom: 0; }
+        .oj-stat-value { font-size: 46px; }
+    }
+</style>
+{/block}
+{block name="content"}
+<div class="oj">
+    <header class="oj-head">
+        <div>
+            <div class="oj-kicker">Online Judge / 在线判题</div>
+            <h1 class="oj-title">统计分析</h1>
+            <p class="oj-sub">按班级与题目查看通过率、错误类型分布与学生作答情况，仅统计正式提交。</p>
+        </div>
+        <div class="oj-meta">
+            <span>统计截止</span>
+            <strong>{:date('Y.m.d')}</strong>
+            <span>仅统计正式提交</span>
+        </div>
+    </header>
+
+    <section class="oj-toolbar">
+        <form class="oj-form" method="get" action="/admin/oj/stats">
+            <div class="oj-field">
+                <label>班级</label>
+                <select name="class_id" class="form-select form-select-sm">
+                    <option value="0">全部班级</option>
+                    {volist name="classes" id="class"}
+                    <option value="{$class.id}" {if $class_id == $class.id}selected{/if}>{$class.class_name}</option>
+                    {/volist}
+                </select>
+            </div>
+            <div class="oj-field">
+                <label>题目</label>
+                <select name="problem_id" class="form-select form-select-sm">
+                    <option value="0">全部题目</option>
+                    {volist name="problems" id="p"}
+                    <option value="{$p.id}" {if $problem_id == $p.id}selected{/if}>{$p.title}</option>
+                    {/volist}
+                </select>
+            </div>
+            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i> 统计</button>
+        </form>
+
+        <form class="oj-form oj-form-export" method="post" action="/admin/oj/export">
+            <div class="oj-field">
+                <label>导出成绩</label>
+                <select name="class_id" class="form-select form-select-sm" required>
+                    <option value="">选择班级</option>
+                    {volist name="classes" id="class"}
+                    <option value="{$class.id}">{$class.class_name}</option>
+                    {/volist}
+                </select>
+            </div>
+            <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-file-earmark-excel"></i> 导出</button>
+        </form>
+    </section>
+
+    <section class="oj-stats">
+        <div class="oj-stat">
+            <div class="oj-stat-no">01 / SUBMISSIONS</div>
+            <div class="oj-stat-value">{$summary.total}</div>
+            <div class="oj-stat-label">提交总数</div>
+            <div class="oj-stat-en">Submissions</div>
+        </div>
+        <div class="oj-stat">
+            <div class="oj-stat-no">02 / ACCEPTED</div>
+            <div class="oj-stat-value">{$summary.ac}</div>
+            <div class="oj-stat-label">AC 提交</div>
+            <div class="oj-stat-en">Accepted</div>
+        </div>
+        <div class="oj-stat">
+            <div class="oj-stat-no">03 / PASS RATE</div>
+            <div class="oj-stat-value">{$summary.rate}%</div>
+            <div class="oj-stat-label">通过率</div>
+            <div class="oj-stat-en">Pass Rate</div>
+        </div>
+        <div class="oj-stat">
+            <div class="oj-stat-no">04 / STUDENTS</div>
+            <div class="oj-stat-value">{$summary.students}</div>
+            <div class="oj-stat-label">参与学生</div>
+            <div class="oj-stat-en">Students</div>
+        </div>
+    </section>
+
+    <section class="oj-sec">
+        <h2 class="oj-sec-title">题目统计</h2>
+        <div class="oj-table-wrap">
+            <table class="oj-table">
+                <thead>
+                    <tr>
+                        <th width="70">ID</th>
+                        <th>题目</th>
+                        <th width="100">提交数</th>
+                        <th width="100">AC 数</th>
+                        <th width="100">通过率</th>
+                        <th>错误分布</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {volist name="problems" id="p"}
+                    <tr>
+                        <td class="oj-num">{$p.id}</td>
+                        <td>{$p.title}</td>
+                        <td class="oj-num">{if isset($problemStats[$p['id']])}{$problemStats[$p['id']]['total']}{else /}0{/if}</td>
+                        <td class="oj-num">{if isset($problemStats[$p['id']])}{$problemStats[$p['id']]['ac']}{else /}0{/if}</td>
+                        <td class="oj-num">
+                            <?php if (isset($problemStats[$p['id']]) && $problemStats[$p['id']]['total'] > 0): ?>
+                            <?php echo round($problemStats[$p['id']]['ac'] / $problemStats[$p['id']]['total'] * 100, 1); ?>%
+                            <?php else: ?>
+                            <span class="text-muted">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php $errs = isset($problemStats[$p['id']]) ? $problemStats[$p['id']]['errors'] : []; ?>
+                            <?php if (empty($errs)): ?>
+                            <span class="text-muted">无</span>
+                            <?php else: ?>
+                            <?php foreach ($errs as $code => $cnt): ?>
+                            <span class="oj-tag"><?php echo isset($statusMap[$code]) ? $statusMap[$code] : $code; ?> <?php echo $cnt; ?></span>
+                            <?php endforeach; ?>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    {/volist}
+                    {if empty($problems)}
+                    <tr><td colspan="6" class="oj-empty">暂无题目数据</td></tr>
+                    {/if}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="oj-sec">
+        <h2 class="oj-sec-title">学生统计</h2>
+        <div class="oj-table-wrap">
+            <table class="oj-table">
+                <thead>
+                    <tr>
+                        <th width="160">学号</th>
+                        <th width="140">姓名</th>
+                        <th width="110">提交次数</th>
+                        <th width="110">AC 次数</th>
+                        <th width="110">AC 题数</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {volist name="studentStats" id="item"}
+                    <tr>
+                        <td class="oj-num">{$item.student_no}</td>
+                        <td>{$item.student_name}</td>
+                        <td class="oj-num">{$item.total}</td>
+                        <td class="oj-num">{$item.ac_count}</td>
+                        <td class="oj-num">{$item.solved}</td>
+                    </tr>
+                    {/volist}
+                    {if empty($studentStats)}
+                    <tr><td colspan="5" class="oj-empty">暂无学生提交数据</td></tr>
+                    {/if}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="oj-foot">
+        <span>软件工程教研室</span>
+        <span>Classroom Suite</span>
+    </div>
+</div>
+{/block}

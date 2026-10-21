@@ -1,0 +1,473 @@
+{extend name="admin/layout/index" /}
+{block name="title"}{if $problem.id}编辑题目{else /}新增题目{/if}{/block}
+{block name="head"}
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<style>
+    .ql-toolbar.ql-snow { background: #1D1D22; border-color: rgba(255,255,255,.12); border-radius: 8px 8px 0 0; }
+    .ql-container.ql-snow { background: #222227; border-color: rgba(255,255,255,.12); border-radius: 0 0 8px 8px; font-size: 14px; }
+    .ql-editor { min-height: 240px; color: #fff; line-height: 1.75; }
+    .ql-editor.ql-blank::before { color: rgba(255,255,255,.35); font-style: normal; }
+    .ql-snow .ql-stroke { stroke: rgba(255,255,255,.7); }
+    .ql-snow .ql-fill { fill: rgba(255,255,255,.7); }
+    .ql-snow .ql-picker { color: rgba(255,255,255,.75); }
+    .ql-snow .ql-picker-options { background: #1D1D22; border-color: rgba(255,255,255,.12); }
+    .ql-snow .ql-picker-item { color: rgba(255,255,255,.75); }
+    .ql-snow .ql-picker-label:hover, .ql-snow .ql-picker-item:hover { color: #C084FC; }
+    .ql-snow .ql-picker-item:hover .ql-stroke { stroke: #C084FC; }
+    #caseModal .modal-content { background: #1D1D22; border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.9); }
+    #caseModal .modal-header, #caseModal .modal-footer { border-color: rgba(255,255,255,.08); }
+    .case-code { font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; white-space: pre; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+</style>
+{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">{if $problem.id}编辑题目{else /}新增题目{/if}</h4>
+        <div class="text-muted small">题干支持富文本、图片、公式与代码片段</div>
+    </div>
+    <div class="d-flex gap-2">
+        {if $problem.id}
+        <a href="/admin/oj/pretest?problem_id={$problem.id}" class="btn btn-outline-info btn-sm"><i class="bi bi-play-circle"></i> 预评测</a>
+        {/if}
+        <a href="/admin/oj/problem" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> 返回列表</a>
+    </div>
+</div>
+
+<form id="problemForm">
+    <input type="hidden" name="id" value="{$problem.id}">
+    <input type="hidden" name="description" id="descriptionInput" value="">
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header py-2"><i class="bi bi-card-text"></i> 基础信息</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small">题目标题 <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" value="{$problem.title}" placeholder="如 两数之和" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small">所属分类</label>
+                            <select name="category_id" class="form-select">
+                                <option value="0">未分类</option>
+                                {volist name="categories" id="cat"}
+                                <option value="{$cat.id}" {if $problem.category_id == $cat.id}selected{/if}>{$cat.name}</option>
+                                {/volist}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">难度</label>
+                            <select name="difficulty" class="form-select">
+                                {volist name="difficultyMap" id="label" key="level"}
+                                <option value="{$key}" {if $problem.difficulty == $key}selected{/if}>{$label}</option>
+                                {/volist}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">知识点标签</label>
+                            <input type="text" name="tags" class="form-control" value="{$problem.tags}" placeholder="循环,链表,数组">
+                        </div>
+                    </div>
+
+                    <label class="form-label small">题干描述</label>
+                    <div id="editorToolbar">
+                        <span class="ql-formats">
+                            <select class="ql-header">
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option value="3"></option>
+                                <option selected></option>
+                            </select>
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                            <button class="ql-strike"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="ordered"></button>
+                            <button class="ql-list" value="bullet"></button>
+                            <button class="ql-blockquote"></button>
+                            <button class="ql-code-block"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-link"></button>
+                            <button class="ql-image"></button>
+                            <button class="ql-formula-btn" type="button" title="插入 LaTeX 公式">Σ</button>
+                            <button class="ql-clean"></button>
+                        </span>
+                    </div>
+                    <div id="editor"></div>
+                    <div class="form-text mt-1">公式可直接插入 LaTeX，例如 $O(n\log n)$；支持图片粘贴上传与代码块。</div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header py-2"><i class="bi bi-input-cursor-text"></i> 输入输出说明</div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small">输入说明</label>
+                            <textarea name="input_desc" class="form-control" rows="3" placeholder="描述输入格式">{$problem.input_desc}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">输出说明</label>
+                            <textarea name="output_desc" class="form-control" rows="3" placeholder="描述输出格式">{$problem.output_desc}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">样例输入</label>
+                            <textarea name="sample_input" class="form-control" rows="4" placeholder="公开样例输入">{$problem.sample_input}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">样例输出</label>
+                            <textarea name="sample_output" class="form-control" rows="4" placeholder="公开样例输出">{$problem.sample_output}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">提示</label>
+                            <textarea name="hint" class="form-control" rows="2" placeholder="数据范围、算法提示等">{$problem.hint}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {if $problem.id}
+            <div class="card mb-3">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-check"></i> 测试用例</span>
+                    <span class="text-muted small">样例对学生在提交前可见，隐藏用例仅用于正式判分</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th width="60">ID</th>
+                                <th>名称</th>
+                                <th width="90">类型</th>
+                                <th width="80">分值</th>
+                                <th width="80">状态</th>
+                                <th>输入 / 输出</th>
+                                <th width="150">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {volist name="cases" id="case"}
+                            <tr>
+                                <td>{$case.id}</td>
+                                <td>{$case.name}</td>
+                                <td>
+                                    {if $case.type == 1}<span class="badge bg-primary">样例</span>{else /}<span class="badge bg-secondary">隐藏</span>{/if}
+                                </td>
+                                <td>{if $case.score > 0}{$case.score}{else /}<span class="text-muted">均分</span>{/if}</td>
+                                <td>
+                                    {if $case.enabled == 1}<span class="badge bg-success">启用</span>{else /}<span class="badge bg-secondary">禁用</span>{/if}
+                                </td>
+                                <td class="text-muted case-code">{$case.input|raw}  ⇒  {$case.output|raw}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editCase({$case.id})"><i class="bi bi-pencil"></i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleCase({$case.id}, {$case.enabled})"><i class="bi bi-power"></i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="delCase({$case.id})"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                            {/volist}
+                            {if empty($cases)}
+                            <tr><td colspan="7" class="text-center text-muted py-4">尚未配置用例，可手工添加或批量上传 .in/.out 文件</td></tr>
+                            {/if}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openCaseModal()"><i class="bi bi-plus-lg"></i> 添加用例</button>
+                    <div id="caseUploadForm" class="d-flex gap-2 align-items-center flex-wrap">
+                        <input type="hidden" name="problem_id" value="{$problem.id}">
+                        <select name="type" class="form-select form-select-sm" style="width:120px;">
+                            <option value="2">隐藏用例</option>
+                            <option value="1">样例用例</option>
+                        </select>
+                        <input type="file" name="files[]" class="form-control form-control-sm" style="width:240px;" multiple accept=".in,.out,.zip">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="caseUploadBtn"><i class="bi bi-upload"></i> 批量上传</button>
+                    </div>
+                    <span class="text-muted small">支持多个同名 .in/.out 文件，或一个 zip 包</span>
+                </div>
+            </div>
+            {else /}
+            <div class="alert alert-info">保存题目后即可添加测试用例、批量上传和预评测。</div>
+            {/if}
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header py-2"><i class="bi bi-sliders"></i> 评测参数</div>
+                <div class="card-body">
+                    <label class="form-label small">支持语言</label>
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        {volist name="languageMap" id="langInfo"}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="languages[]" value="{$key}" id="lang_{$key}" {if in_array($key, $selectedLanguages)}checked{/if}>
+                            <label class="form-check-label small" for="lang_{$key}">{$langInfo.name}</label>
+                        </div>
+                        {/volist}
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small">时间限制 (ms)</label>
+                            <input type="number" name="time_limit" class="form-control" value="{$problem.time_limit}" min="100" max="60000">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">内存限制 (KB)</label>
+                            <input type="number" name="memory_limit" class="form-control" value="{$problem.memory_limit}" min="1024" max="1048576">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">总分</label>
+                            <input type="number" name="total_score" class="form-control" value="{$problem.total_score}" min="0" step="1">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">排序</label>
+                            <input type="number" name="sort" class="form-control" value="{$problem.sort}">
+                        </div>
+                    </div>
+
+                    <label class="form-label small mt-3">计分策略</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="score_mode" value="case" id="modeCase" {if $problem.score_mode == 'case'}checked{/if}>
+                        <label class="form-check-label small" for="modeCase">按用例得分（通过一组得对应分数）</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="score_mode" value="all" id="modeAll" {if $problem.score_mode == 'all'}checked{/if}>
+                        <label class="form-check-label small" for="modeAll">全部用例通过才得分（AC 拿满分）</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="ignore_trailing" value="1" id="ignoreTrailing" {if $problem.ignore_trailing == 1}checked{/if}>
+                        <label class="form-check-label small" for="ignoreTrailing">忽略行末空格与末尾换行</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="show_detail" value="1" id="showDetail" {if $problem.show_detail == 1}checked{/if}>
+                        <label class="form-check-label small" for="showDetail">答案错误时公开隐藏用例详情</label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_public" value="1" id="isPublic" {if $problem.is_public == 1}checked{/if}>
+                        <label class="form-check-label small" for="isPublic">上架（学生可见）</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2"></i> 保存题目</button>
+                </div>
+            </div>
+
+            {if $problem.id}
+            <div class="card">
+                <div class="card-body small text-muted">
+                    <div>题目 ID：{$problem.id}</div>
+                    <div class="mt-1">编辑完成后建议先预评测，确认用例与标准输出无误再上架。</div>
+                </div>
+            </div>
+            {/if}
+        </div>
+    </div>
+</form>
+
+{if $problem.id}
+<div class="modal fade" id="caseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="caseModalTitle">添加测试用例</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="caseForm">
+                    <input type="hidden" name="id" id="caseId" value="0">
+                    <input type="hidden" name="problem_id" value="{$problem.id}">
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-5">
+                            <label class="form-label small">用例名称</label>
+                            <input type="text" name="name" id="caseName" class="form-control form-control-sm" placeholder="如 用例1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">类型</label>
+                            <select name="type" id="caseType" class="form-select form-select-sm">
+                                <option value="2">隐藏用例</option>
+                                <option value="1">样例用例</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">分值</label>
+                            <input type="number" name="score" id="caseScore" class="form-control form-control-sm" value="0" min="0" step="0.5">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">排序</label>
+                            <input type="number" name="sort" id="caseSort" class="form-control form-control-sm" value="0">
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small">输入数据</label>
+                            <textarea name="input" id="caseInput" class="form-control" rows="8" style="font-family:Consolas,monospace;"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">标准输出</label>
+                            <textarea name="output" id="caseOutput" class="form-control" rows="8" style="font-family:Consolas,monospace;"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="enabled" value="1" id="caseEnabled" checked>
+                        <label class="form-check-label small" for="caseEnabled">启用该用例</label>
+                    </div>
+                    <div class="form-text">分值留 0 时按题目总分在所有启用用例间平均分配。</div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveCase()">保存用例</button>
+            </div>
+        </div>
+    </div>
+</div>
+{/if}
+{/block}
+{block name="js"}
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script>
+var DESCRIPTION = {$descriptionJson|raw};
+var CASES = {$casesJson|raw};
+
+var quill = new Quill('#editor', {
+    theme: 'snow',
+    modules: {toolbar: '#editorToolbar'},
+    placeholder: '输入题干，可插入图片、公式和代码块…'
+});
+quill.root.innerHTML = DESCRIPTION || '';
+
+var toolbar = quill.getModule('toolbar');
+toolbar.addHandler('image', function () {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function () {
+        if (!input.files.length) return;
+        var fd = new FormData();
+        fd.append('image', input.files[0]);
+        fetch('/admin/oj/upload', {method: 'POST', body: fd})
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.code === 1) {
+                    var range = quill.getSelection(true);
+                    quill.insertEmbed(range.index, 'image', d.url, 'user');
+                    quill.setSelection(range.index + 1);
+                } else {
+                    showAlert(d.msg || '上传失败', 'danger');
+                }
+            });
+    };
+    input.click();
+});
+toolbar.addHandler('formula-btn', function () {
+    var tex = window.prompt('输入 LaTeX 公式（不含 $ 符号），例如 O(n\\log n)');
+    if (!tex) return;
+    var range = quill.getSelection(true);
+    quill.insertText(range.index, ' $' + tex + '$ ', 'user');
+    quill.setSelection(range.index + tex.length + 3);
+});
+
+document.getElementById('problemForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    document.getElementById('descriptionInput').value = quill.root.innerHTML;
+    fetch('/admin/oj/problem/save', {method: 'POST', body: new FormData(this)})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+            if (d.code === 1 && d.url) setTimeout(function () { location.href = d.url; }, 700);
+        });
+});
+
+function openCaseModal() {
+    document.getElementById('caseId').value = 0;
+    document.getElementById('caseName').value = '';
+    document.getElementById('caseType').value = '2';
+    document.getElementById('caseScore').value = 0;
+    document.getElementById('caseSort').value = 0;
+    document.getElementById('caseInput').value = '';
+    document.getElementById('caseOutput').value = '';
+    document.getElementById('caseEnabled').checked = true;
+    document.getElementById('caseModalTitle').textContent = '添加测试用例';
+    new bootstrap.Modal(document.getElementById('caseModal')).show();
+}
+
+function editCase(id) {
+    var item = null;
+    for (var i = 0; i < CASES.length; i++) {
+        if (parseInt(CASES[i].id) === parseInt(id)) { item = CASES[i]; break; }
+    }
+    if (!item) return;
+    document.getElementById('caseId').value = item.id;
+    document.getElementById('caseName').value = item.name || '';
+    document.getElementById('caseType').value = item.type;
+    document.getElementById('caseScore').value = item.score;
+    document.getElementById('caseSort').value = item.sort;
+    document.getElementById('caseInput').value = item.input || '';
+    document.getElementById('caseOutput').value = item.output || '';
+    document.getElementById('caseEnabled').checked = parseInt(item.enabled) === 1;
+    document.getElementById('caseModalTitle').textContent = '编辑测试用例';
+    new bootstrap.Modal(document.getElementById('caseModal')).show();
+}
+
+function saveCase() {
+    fetch('/admin/oj/case/save', {method: 'POST', body: new FormData(document.getElementById('caseForm'))})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+            if (d.code === 1) setTimeout(function () { location.reload(); }, 700);
+        });
+}
+
+async function delCase(id) {
+    if (!await confirmAction('确认删除该测试用例？', {danger: true, okText: '删除'})) return;
+    fetch('/admin/oj/case/delete', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: 'id=' + id})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+            if (d.code === 1) setTimeout(function () { location.reload(); }, 600);
+        });
+}
+
+function toggleCase(id, enabled) {
+    fetch('/admin/oj/case/toggle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'id=' + id + '&enabled=' + (parseInt(enabled) === 1 ? 0 : 1)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+        showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+        if (d.code === 1) setTimeout(function () { location.reload(); }, 600);
+    });
+}
+
+var uploadForm = document.getElementById('caseUploadForm');
+if (uploadForm) {
+    document.getElementById('caseUploadBtn').addEventListener('click', function () {
+        var btn = this;
+        var fileInput = uploadForm.querySelector('input[type=file]');
+        if (!fileInput.files.length) {
+            showAlert('请选择要上传的 .in/.out 文件或 zip 包', 'warning');
+            return;
+        }
+        var fd = new FormData();
+        fd.append('problem_id', uploadForm.querySelector('input[name=problem_id]').value);
+        fd.append('type', uploadForm.querySelector('select[name=type]').value);
+        for (var i = 0; i < fileInput.files.length; i++) {
+            fd.append('files[]', fileInput.files[i]);
+        }
+        btn.disabled = true;
+        fetch('/admin/oj/case/upload', {method: 'POST', body: fd})
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                btn.disabled = false;
+                showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+                if (d.code === 1) setTimeout(function () { location.reload(); }, 800);
+            })
+            .catch(function () {
+                btn.disabled = false;
+                showAlert('上传失败，请稍后重试', 'danger');
+            });
+    });
+}
+</script>
+{/block}

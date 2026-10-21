@@ -1,0 +1,168 @@
+{extend name="student/layout/index" /}
+{block name="title"}我的提交{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">我的提交</h4>
+        <div class="text-muted small">查看历史评测结果与编译信息</div>
+    </div>
+    <a href="/oj" class="btn btn-outline-primary btn-sm"><i class="bi bi-journal-code"></i> 返回题库</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small">提交总数</div>
+                <div class="fs-4 text-white">{$summary.total}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small">通过次数</div>
+                <div class="fs-4 text-white">{$summary.ac_count}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-muted small">已通过题目</div>
+                <div class="fs-4 text-white">{$summary.solved}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th width="70">ID</th>
+                    <th>题目</th>
+                    <th width="110">语言</th>
+                    <th width="120">状态</th>
+                    <th width="80">得分</th>
+                    <th width="130">耗时 / 内存</th>
+                    <th width="160">提交时间</th>
+                    <th width="80">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="list" id="item"}
+                <tr>
+                    <td>{$item.id}</td>
+                    <td>
+                        <a href="/oj/problem?id={$item.problem_id}" class="text-decoration-none">
+                            {if isset($problemMap[$item['problem_id']])}{$problemMap[$item['problem_id']]}{else /}题目 #{$item.problem_id}{/if}
+                        </a>
+                    </td>
+                    <td class="text-muted small">{if isset($languageMap[$item['language']])}{$languageMap[$item['language']]['name']}{else /}{$item.language}{/if}</td>
+                    <td>
+                        {if $item.status == 'ac'}<span class="badge bg-success">{$statusMap[$item['status']]}</span>
+                        {elseif $item.status == 'pending' || $item.status == 'judging' /}<span class="badge bg-info text-dark">{$statusMap[$item['status']]}</span>
+                        {elseif $item.status == 'ce' /}<span class="badge bg-warning text-dark">{$statusMap[$item['status']]}</span>
+                        {else /}<span class="badge bg-danger">{$statusMap[$item['status']]}</span>{/if}
+                    </td>
+                    <td>{$item.score}</td>
+                    <td class="text-muted small">{$item.time_used} ms / {$item.memory_used} KB</td>
+                    <td class="text-muted small">{$item.create_time}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDetail({$item.id}, this)"><i class="bi bi-eye"></i></button>
+                    </td>
+                </tr>
+                <tr id="detailRow{$item.id}" style="display:none;">
+                    <td colspan="8" class="bg-transparent">
+                        <div id="detailBody{$item.id}" class="small text-muted">加载中...</div>
+                    </td>
+                </tr>
+                {/volist}
+                {if $list->isEmpty()}
+                <tr><td colspan="8" class="text-center text-muted py-4">暂无提交记录，去题库挑一道题试试</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+    {if $list->total() > 0}
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <span class="text-muted small">共 {$list->total()} 条记录</span>
+        {$list->render()|raw}
+    </div>
+    {/if}
+</div>
+{/block}
+{block name="head"}
+<style>
+    .oj-code-pre {
+        background: #0E0E11; border: 1px solid rgba(255,255,255,.09); border-radius: 8px;
+        padding: 10px 12px; color: rgba(255,255,255,.82);
+        font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+        font-size: 12.5px; line-height: 1.6;
+        white-space: pre-wrap; overflow-wrap: anywhere;
+        max-height: 200px; overflow: auto;
+    }
+</style>
+{/block}
+{block name="js"}
+<script>
+var STATUS_TEXT = {
+    pending: '排队中', judging: '判题中', ac: '答案正确', ce: '编译错误',
+    wa: '答案错误', tle: '运行超时', mle: '内存超限', re: '运行错误', se: '系统错误'
+};
+function escapeHtml(text) {
+    return String(text === null || text === undefined ? '' : text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function badgeClass(status) {
+    if (status === 'ac') return 'bg-success';
+    if (status === 'pending' || status === 'judging') return 'bg-info text-dark';
+    if (status === 'ce') return 'bg-warning text-dark';
+    return 'bg-danger';
+}
+function viewDetail(id, btn) {
+    var row = document.getElementById('detailRow' + id);
+    var body = document.getElementById('detailBody' + id);
+    if (row.style.display !== 'none') {
+        row.style.display = 'none';
+        return;
+    }
+    row.style.display = '';
+    body.textContent = '加载中...';
+    fetch('/oj/status?id=' + id)
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (d.code !== 1) { body.textContent = d.msg || '加载失败'; return; }
+            var data = d.data;
+            var html = '<div class="mb-2 text-white">' + escapeHtml(data.status_text || STATUS_TEXT[data.status] || data.status)
+                + ' · 得分 ' + data.score + ' · 最大耗时 ' + data.time_used + ' ms · 最大内存 ' + data.memory_used + ' KB</div>';
+            if (data.compile_log) {
+                html += '<div class="mb-1">编译 / 运行日志</div><pre class="oj-code-pre">' + escapeHtml(data.compile_log) + '</pre>';
+            }
+            if (data.cases && data.cases.length > 0) {
+                html += '<table class="table table-sm table-hover mb-0"><thead><tr><th>#</th><th>用例</th><th>类型</th><th>状态</th><th>耗时</th><th>内存</th><th>得分</th></tr></thead><tbody>';
+                for (var i = 0; i < data.cases.length; i++) {
+                    var c = data.cases[i];
+                    html += '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(c.name) + '</td>'
+                        + '<td>' + (c.type === 1 ? '样例' : '隐藏') + '</td>'
+                        + '<td><span class="badge ' + badgeClass(c.status) + '">' + (STATUS_TEXT[c.status] || c.status) + '</span></td>'
+                        + '<td>' + c.time + ' ms</td><td>' + c.memory + ' KB</td><td>' + c.score + '</td></tr>';
+                    if (c.input !== '' || c.output !== '' || c.expected !== '') {
+                        html += '<tr><td colspan="7" class="pt-0">'
+                            + '<div class="small">输入</div><pre class="oj-code-pre mb-1">' + escapeHtml(c.input) + '</pre>'
+                            + '<div class="small">期望输出</div><pre class="oj-code-pre mb-1">' + escapeHtml(c.expected) + '</pre>'
+                            + '<div class="small">实际输出</div><pre class="oj-code-pre mb-0">' + escapeHtml(c.output) + '</pre>'
+                            + '</td></tr>';
+                    }
+                }
+                html += '</tbody></table>';
+            }
+            body.innerHTML = html;
+        })
+        .catch(function () { body.textContent = '加载失败，请稍后重试'; });
+}
+</script>
+{/block}

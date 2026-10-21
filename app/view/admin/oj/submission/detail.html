@@ -1,0 +1,160 @@
+{extend name="admin/layout/index" /}
+{block name="title"}提交详情{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">提交详情 #{$sub.id}</h4>
+        <div class="text-muted small">
+            {$sub.student_name} {$sub.student_no} · {$sub.create_time}
+        </div>
+    </div>
+    <a href="/admin/oj/submission" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> 返回列表</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>题目与代码</span>
+                <span class="text-muted small">{$sub.language}</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="text-muted small">题目：</span>
+                    {if $problem}
+                    <a href="/admin/oj/problem/edit?id={$problem.id}" class="text-decoration-none">{$problem.title}</a>
+                    {else /}
+                    <span class="text-muted">题目已删除</span>
+                    {/if}
+                </div>
+                <pre class="oj-code mb-0">{$sub.code|htmlentities}</pre>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">评测结果</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted small">状态</span>
+                    <span>
+                        {if $sub.status == 'ac'}<span class="badge bg-success">{$statusMap[$sub['status']]}</span>
+                        {elseif $sub.status == 'pending' || $sub.status == 'judging' /}<span class="badge bg-info text-dark">{$statusMap[$sub['status']]}</span>
+                        {elseif $sub.status == 'ce' /}<span class="badge bg-warning text-dark">{$statusMap[$sub['status']]}</span>
+                        {else /}<span class="badge bg-danger">{$statusMap[$sub['status']]}</span>{/if}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted small">得分</span>
+                    <span>{$sub.score}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted small">最大耗时</span>
+                    <span>{$sub.time_used} ms</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted small">最大内存</span>
+                    <span>{$sub.memory_used} KB</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted small">提交 IP</span>
+                    <span class="small">{$sub.ip}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{if $sub.compile_log != ''}
+<div class="card mb-3">
+    <div class="card-header">编译 / 运行日志</div>
+    <div class="card-body">
+        <pre class="oj-code mb-0">{$sub.compile_log|htmlentities}</pre>
+    </div>
+</div>
+{/if}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>测试用例结果</span>
+        <span class="text-muted small">共 {:count($cases)} 个用例</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th width="60">#</th>
+                    <th width="180">用例</th>
+                    <th width="120">类型</th>
+                    <th width="110">状态</th>
+                    <th width="100">耗时</th>
+                    <th width="110">内存</th>
+                    <th width="80">得分</th>
+                    <th width="80">详情</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="cases" id="item" key="idx"}
+                <tr>
+                    <td>{$idx}</td>
+                    <td>{$item.name}</td>
+                    <td>{if $item.type == 1}<span class="badge bg-primary">样例</span>{else /}<span class="badge bg-secondary">隐藏</span>{/if}</td>
+                    <td>
+                        {if $item.status == 'ac'}<span class="badge bg-success">{$statusMap[$item['status']]}</span>
+                        {elseif $item.status == 'ce' || $item.status == 'se' /}<span class="badge bg-warning text-dark">{$statusMap[$item['status']]}</span>
+                        {else /}<span class="badge bg-danger">{$statusMap[$item['status']]}</span>{/if}
+                    </td>
+                    <td>{$item.time} ms</td>
+                    <td>{$item.memory} KB</td>
+                    <td>{$item.score}</td>
+                    <td>
+                        {if $item.input != '' || $item.output != '' || $item.expected != ''}
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#caseDetail{$item.case_id}">
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        {else /}
+                        <span class="text-muted small">隐藏</span>
+                        {/if}
+                    </td>
+                </tr>
+                {if $item.input != '' || $item.output != '' || $item.expected != ''}
+                <tr class="collapse" id="caseDetail{$item.case_id}">
+                    <td colspan="8">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="text-muted small mb-1">输入</div>
+                                <pre class="oj-code mb-0">{$item.input|htmlentities}</pre>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small mb-1">期望输出</div>
+                                <pre class="oj-code mb-0">{$item.expected|htmlentities}</pre>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small mb-1">实际输出</div>
+                                <pre class="oj-code mb-0">{$item.output|htmlentities}</pre>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {/if}
+                {/volist}
+                {if empty($cases)}
+                <tr><td colspan="8" class="text-center text-muted py-4">暂无用例结果</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+</div>
+{/block}
+{block name="head"}
+<style>
+    .oj-code {
+        background: #0E0E11; border: 1px solid rgba(255,255,255,.09); border-radius: 8px;
+        padding: 12px 14px; color: rgba(255,255,255,.82);
+        font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+        font-size: 13px; line-height: 1.65;
+        white-space: pre-wrap; overflow-wrap: anywhere;
+        max-height: 360px; overflow: auto;
+    }
+</style>
+{/block}

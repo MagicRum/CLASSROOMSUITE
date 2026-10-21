@@ -33,6 +33,7 @@ CREATE TABLE cs_students (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     student_no TEXT NOT NULL DEFAULT '',
     name TEXT NOT NULL DEFAULT '',
+    password TEXT NOT NULL DEFAULT '',
     class_id INTEGER NOT NULL DEFAULT 0,
     group_id INTEGER NOT NULL DEFAULT 0,
     phone TEXT DEFAULT '',
@@ -98,3 +99,92 @@ INSERT INTO cs_questions (title, question_type, option_a, option_b, option_c, op
 ('MySQL中用于查询的关键字是？', 1, 'UPDATE', 'SELECT', 'INSERT', 'DELETE', 'B', 5.0, 1, '数据库'),
 ('TCP是面向连接的协议', 3, '', '', '', '', 'A', 5.0, 2, '网络基础'),
 ('以下哪种数据结构是先进先出？', 1, '栈', '队列', '树', '图', 'B', 5.0, 2, '数据结构');
+
+-- ============================================================
+-- 在线判题系统（OJ）
+-- ============================================================
+
+-- 题库分类（课程 / 章节）
+DROP TABLE IF EXISTS cs_oj_categories;
+CREATE TABLE cs_oj_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL DEFAULT '',
+    parent_id INTEGER NOT NULL DEFAULT 0,
+    sort INTEGER NOT NULL DEFAULT 0,
+    create_time TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 题目
+DROP TABLE IF EXISTS cs_oj_problems;
+CREATE TABLE cs_oj_problems (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category_id INTEGER NOT NULL DEFAULT 0,
+    title TEXT NOT NULL DEFAULT '',
+    description TEXT DEFAULT '',
+    input_desc TEXT DEFAULT '',
+    output_desc TEXT DEFAULT '',
+    sample_input TEXT DEFAULT '',
+    sample_output TEXT DEFAULT '',
+    hint TEXT DEFAULT '',
+    difficulty INTEGER NOT NULL DEFAULT 2,
+    tags TEXT DEFAULT '',
+    languages TEXT NOT NULL DEFAULT 'c,cpp,python,js',
+    time_limit INTEGER NOT NULL DEFAULT 1000,
+    memory_limit INTEGER NOT NULL DEFAULT 262144,
+    total_score REAL NOT NULL DEFAULT 100,
+    score_mode TEXT NOT NULL DEFAULT 'case',
+    ignore_trailing INTEGER NOT NULL DEFAULT 1,
+    show_detail INTEGER NOT NULL DEFAULT 1,
+    is_public INTEGER NOT NULL DEFAULT 1,
+    sort INTEGER NOT NULL DEFAULT 0,
+    create_time TEXT DEFAULT CURRENT_TIMESTAMP,
+    update_time TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_oj_problem_category ON cs_oj_problems(category_id);
+CREATE INDEX idx_oj_problem_public ON cs_oj_problems(is_public);
+
+-- 测试用例（type: 1 样例 2 隐藏）
+DROP TABLE IF EXISTS cs_oj_test_cases;
+CREATE TABLE cs_oj_test_cases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    problem_id INTEGER NOT NULL DEFAULT 0,
+    name TEXT NOT NULL DEFAULT '',
+    input TEXT DEFAULT '',
+    output TEXT DEFAULT '',
+    score REAL NOT NULL DEFAULT 0,
+    type INTEGER NOT NULL DEFAULT 2,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    sort INTEGER NOT NULL DEFAULT 0,
+    create_time TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_oj_case_problem ON cs_oj_test_cases(problem_id);
+
+-- 提交记录（is_test: 1 表示教师预评测）
+DROP TABLE IF EXISTS cs_oj_submissions;
+CREATE TABLE cs_oj_submissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    problem_id INTEGER NOT NULL DEFAULT 0,
+    student_id INTEGER NOT NULL DEFAULT 0,
+    student_no TEXT DEFAULT '',
+    student_name TEXT DEFAULT '',
+    class_id INTEGER NOT NULL DEFAULT 0,
+    language TEXT NOT NULL DEFAULT '',
+    code TEXT DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    score REAL NOT NULL DEFAULT 0,
+    time_used INTEGER NOT NULL DEFAULT 0,
+    memory_used INTEGER NOT NULL DEFAULT 0,
+    compile_log TEXT DEFAULT '',
+    result_json TEXT DEFAULT '',
+    is_test INTEGER NOT NULL DEFAULT 0,
+    ip TEXT DEFAULT '',
+    create_time TEXT DEFAULT CURRENT_TIMESTAMP,
+    judge_time TEXT DEFAULT NULL
+);
+
+CREATE INDEX idx_oj_sub_problem ON cs_oj_submissions(problem_id);
+CREATE INDEX idx_oj_sub_student ON cs_oj_submissions(student_id);
+CREATE INDEX idx_oj_sub_status ON cs_oj_submissions(status);
+CREATE INDEX idx_oj_sub_time ON cs_oj_submissions(create_time);

@@ -38,7 +38,7 @@
         <span class="q-badge" style="background:#A855F7;color:#fff;">第{$k}题</span>
         <span class="q-badge" style="background:rgba(168,85,247,.15);color:#D8B4FE;">{$typeMap[$q.question_type]|default='题目'}</span>
     </div>
-    <p style="font-size:19px;font-weight:600;margin-bottom:16px;line-height:1.7;color:#fff;">{$q.title}</p>
+    <p style="font-size:19px;font-weight:600;margin-bottom:16px;line-height:1.7;color:var(--jb-text);">{$q.title}</p>
 
     {if $q.question_type == 3}
     <div class="q-option"><strong>A.</strong> 正确</div>

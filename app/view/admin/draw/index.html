@@ -86,7 +86,7 @@
 {block name="content"}
 <div class="draw-stage">
     <h3 style="font-weight:700;letter-spacing:2px;">课堂随机抽题</h3>
-    <p class="mb-4" style="color:rgba(255,255,255,.55);">题库共 <strong style="color:#C084FC;">{$poolCount}</strong> 道题，每次随机抽取 2 道</p>
+    <p class="mb-4" style="color:var(--jb-text-dim);">题库共 <strong style="color:#C084FC;">{$poolCount}</strong> 道题，每次随机抽取 2 道</p>
 
     {if $poolCount >= 2}
     <div id="drawArea">
@@ -167,7 +167,7 @@ function renderQuestions(data){
               + '<span class="q-badge" style="background:#A855F7;color:#fff;">第'+(idx+1)+'题</span>'
               + '<span class="q-badge" style="background:rgba(168,85,247,.15);color:#D8B4FE;">'+q.type_name+'</span>'
               + '</div>'
-              + '<p style="font-size:19px;font-weight:600;margin-bottom:16px;line-height:1.7;color:#fff;">'+q.title+'</p>';
+              + '<p style="font-size:19px;font-weight:600;margin-bottom:16px;line-height:1.7;color:var(--jb-text);">'+q.title+'</p>';
 
         if(q.question_type==3){
             html += '<div class="q-option"><strong>A.</strong> 正确</div>'
