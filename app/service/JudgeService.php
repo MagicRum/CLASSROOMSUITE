@@ -301,7 +301,7 @@ class JudgeService
 
         if ($lang === 'c' || $lang === 'cpp') {
             $exe = $workDir . DIRECTORY_SEPARATOR . ($isWin ? 'main.exe' : 'main');
-            $std = $lang === 'c' ? 'c11' : 'c++17';
+            $std = $lang === 'c' ? 'c11' : self::cppStandard($bin, $workDir);
             $cmd = self::q($bin) . ' -O2 -std=' . $std . ' -o ' . self::q($exe) . ' ' . self::q($src) . ' -lm';
             $out = self::execCapture($cmd, $workDir, 30);
             if ($out['code'] !== 0) {
@@ -326,6 +326,21 @@ class JudgeService
             return ['ok' => false, 'log' => $out['output'], 'run' => ''];
         }
         return ['ok' => true, 'log' => '', 'run' => self::q($bin) . ' ' . self::q($src)];
+    }
+
+    /**
+     * 根据编译器版本选择 C++ 标准（GCC 4.x 不支持 c++17）
+     */
+    protected static function cppStandard($bin, $workDir)
+    {
+        static $std = null;
+        if ($std !== null) {
+            return $std;
+        }
+        $out = self::execCapture(self::q($bin) . ' -dumpversion', $workDir, 10);
+        $major = intval(strtok(trim((string) $out['output']), '.'));
+        $std = $major >= 5 ? 'c++17' : 'c++11';
+        return $std;
     }
 
     /**
