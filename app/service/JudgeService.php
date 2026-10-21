@@ -130,7 +130,7 @@ class JudgeService
         if (!is_file($script)) {
             return false;
         }
-        $php = PHP_BINARY;
+        $php = self::cliPhpBinary();
         if (DIRECTORY_SEPARATOR === '\\') {
             $cmd = 'start /B "" "' . $php . '" "' . $script . '" > NUL 2>&1';
             $fp = @popen($cmd, 'r');
@@ -141,6 +141,42 @@ class JudgeService
             @exec(escapeshellarg($php) . ' ' . escapeshellarg($script) . ' > /dev/null 2>&1 &');
         }
         return true;
+    }
+
+    /**
+     * 定位 PHP CLI 可执行文件
+     * php-fpm 环境下 PHP_BINARY 指向 php-fpm，不能用来跑脚本，需另行探测
+     */
+    protected static function cliPhpBinary()
+    {
+        static $bin = null;
+        if ($bin !== null) {
+            return $bin;
+        }
+        $candidates = [];
+        $env = getenv('JUDGE_PHP_BIN');
+        if ($env) {
+            $candidates[] = $env;
+        }
+        if (strpos(PHP_BINARY, 'php-fpm') === false) {
+            $candidates[] = PHP_BINARY;
+        }
+        $candidates[] = '/usr/bin/php';
+        $candidates[] = '/usr/local/bin/php';
+        $glob = glob('/www/server/php/*/bin/php');
+        if (is_array($glob) && $glob) {
+            rsort($glob);
+            foreach ($glob as $item) {
+                $candidates[] = $item;
+            }
+        }
+        foreach ($candidates as $item) {
+            if ($item && @is_file($item) && @is_executable($item)) {
+                return $bin = $item;
+            }
+        }
+        // 兜底交给 shell 的 PATH 解析
+        return $bin = 'php';
     }
 
     /**
@@ -889,7 +925,10 @@ class JudgeService
         if (in_array($dir, $parts, true)) {
             return;
         }
-        putenv('PATH=' . $dir . ($path === '' ? '' : $sep . $path));
+        // 部分面板环境会禁用 putenv，禁用后调用会直接抛错，这里做兼容处理
+        if (function_exists('putenv')) {
+            @putenv('PATH=' . $dir . ($path === '' ? '' : $sep . $path));
+        }
     }
 
     /**
