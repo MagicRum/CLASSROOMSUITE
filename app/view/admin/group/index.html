@@ -73,7 +73,7 @@
                 </ul>
             </div>
             <div class="card-footer text-end bg-white border-0">
-                <a class="btn btn-sm btn-outline-danger" onclick="delGroup({$g.id})"><i class="bi bi-trash"></i> 解散</a>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="delGroup({$g.id})"><i class="bi bi-trash"></i> 解散</button>
             </div>
         </div>
     </div>
@@ -102,9 +102,9 @@ function toggleMode(){
         input.name='group_size'; input.value='6'; input.placeholder='如 6';
     }
 }
-document.getElementById('randomForm').addEventListener('submit',function(e){
+document.getElementById('randomForm').addEventListener('submit', async function(e){
     e.preventDefault();
-    if(!confirmAction('确认重新随机分组？会清空原有分组！')) return;
+    if(!await confirmAction('重新随机分组会清空该班级原有分组，确认继续？', {okText:'重新分组'})) return;
     var fd = new FormData(this);
     fetch('/admin/Group/random',{method:'POST',body:fd})
         .then(r=>r.json()).then(d=>{
@@ -112,8 +112,8 @@ document.getElementById('randomForm').addEventListener('submit',function(e){
             if(d.code===1) setTimeout(function(){location.reload();},800);
         });
 });
-function delGroup(id){
-    if(!confirmAction('确认解散该分组？组内学生将回到未分组状态')) return;
+async function delGroup(id){
+    if(!await confirmAction('确认解散该分组？组内学生将回到未分组状态。', {danger:true, okText:'解散'})) return;
     fetch('/admin/Group/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id})
         .then(r=>r.json()).then(d=>{
             showAlert(d.msg,d.code===1?'success':'danger');

@@ -1,0 +1,43 @@
+{extend name="student/layout/index" /}
+{block name="title"}抽题记录{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">抽题记录</h4>
+    <a class="btn btn-primary" href="/student/draw"><i class="bi bi-shuffle"></i> 去抽题</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th>记录编号</th>
+                    <th>抽题时间</th>
+                    <th>题目数量</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {volist name="list" id="item"}
+                <tr>
+                    <td>#{$item.id}</td>
+                    <td>{$item.draw_time|default='-'}</td>
+                    <td><?php echo count($item['question_ids']); ?> 道</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-primary" href="/student/records/detail?id=<?php echo $item['id']; ?>">
+                            <i class="bi bi-eye"></i> 查看
+                        </a>
+                    </td>
+                </tr>
+                {/volist}
+                {if $list->isEmpty()}
+                <tr><td colspan="4" class="text-center text-muted py-4">暂无记录，先去抽一次题吧</td></tr>
+                {/if}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-end">{$list|raw}</div>
+    </div>
+</div>
+{/block}

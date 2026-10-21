@@ -92,7 +92,7 @@ class Question extends Base
             QuestionModel::create($data);
         }
 
-        return $this->success('保存成功', null, (string) url('admin/Question/index'));
+        return $this->success('保存成功', null, '/admin/question');
     }
 
     /**

@@ -87,6 +87,17 @@ class Exam extends Base
     }
 
     /**
+     * 批量删除考试记录
+     */
+    public function batchDelete()
+    {
+        $ids = input('ids/a', []);
+        if (empty($ids)) return $this->error('请选择要删除的记录');
+        ExamRecord::whereIn('id', $ids)->delete();
+        return $this->success('批量删除成功');
+    }
+
+    /**
      * 手动删除考试记录
      */
     public function delete()

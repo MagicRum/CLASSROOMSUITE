@@ -7,8 +7,10 @@
 
 use think\facade\Route;
 
-// 默认首页
+// 默认首页（系统门户）
 Route::rule('/', 'Index/index');
+// 抽题系统首页（登录 / 注册入口）
+Route::rule('draw', 'Index/draw');
 
 // ============== 管理员端 - 公开路由（无需登录） ==============
 // 注意：更具体的路由必须放在前面，否则会被短路由贪婪匹配
@@ -16,10 +18,28 @@ Route::rule('admin/login/doLogin', 'admin.Login/doLogin');
 Route::rule('admin/login', 'admin.Login/index');
 Route::rule('admin/logout', 'admin.Login/logout');
 
+// ============== 学生端 - 公开路由（无需登录） ==============
+Route::rule('student/register/doRegister', 'student.Register/doRegister');
+Route::rule('student/register', 'student.Register/index');
+Route::rule('student/login/doLogin', 'student.Login/doLogin');
+Route::rule('student/login', 'student.Login/index');
+Route::rule('student/logout', 'student.Login/logout');
+
+// ============== 学生端 - 受保护路由 ==============
+Route::group('student', function () {
+    Route::rule('draw/go', 'student.Exam/draw');
+    Route::rule('draw', 'student.Exam/index');
+    Route::rule('records/detail', 'student.Exam/detail');
+    Route::rule('records', 'student.Exam/records');
+})->middleware(\app\middleware\StudentAuth::class);
+
 // ============== 管理员端 - 受保护路由 ==============
 // 注意：具体动作路由必须放在索引路由(xxx)前面，否则被贪婪匹配
 Route::group('admin', function () {
     Route::rule('dashboard', 'admin.Dashboard/index');
+
+    Route::rule('setting/save', 'admin.Setting/save');
+    Route::rule('setting', 'admin.Setting/index');
 
     Route::rule('student/edit', 'admin.Student/edit');
     Route::rule('student/save', 'admin.Student/save');
@@ -51,5 +71,6 @@ Route::group('admin', function () {
 
     Route::rule('exam/detail', 'admin.Exam/detail');
     Route::rule('exam/delete', 'admin.Exam/delete');
+    Route::rule('exam/batchDelete', 'admin.Exam/batchDelete');
     Route::rule('exam', 'admin.Exam/index');
 })->middleware(\app\middleware\AdminAuth::class);

@@ -8,7 +8,7 @@ class Login
     public function index()
     {
         if (!empty($_SESSION['admin_id'])) {
-            return redirect((string) url('admin.Dashboard/index'));
+            return redirect('/admin/dashboard');
         }
         return view('admin/login/index');
     }

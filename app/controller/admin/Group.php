@@ -78,7 +78,7 @@ class Group extends Base
             Student::whereIn('id', $ids)->update(['group_id' => $group->id]);
         }
 
-        return $this->success("分组完成，共分" . count($groups) . "组", null, (string) url('admin/Group/index', ['class_id' => $classId]));
+        return $this->success("分组完成，共分" . count($groups) . "组", null, '/admin/group?class_id=' . $classId);
     }
 
     /**

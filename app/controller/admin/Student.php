@@ -96,7 +96,7 @@ class Student extends Base
             StudentModel::create($data);
         }
 
-        return $this->success('保存成功', null, (string) url('admin/Student/index'));
+        return $this->success('保存成功', null, '/admin/student');
     }
 
     /**

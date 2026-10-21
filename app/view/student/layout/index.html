@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{block name="title"}抽题系统{/block}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/400.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/500.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/600.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.0.16/500.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.0.16/700.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/400.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/500.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/700.css" rel="stylesheet">
+    <style>
+        :root {
+            --jb-bg: #101013;
+            --jb-panel: #17171B;
+            --jb-panel-2: #1D1D22;
+            --jb-input: #222227;
+            --jb-border: rgba(255,255,255,.09);
+            --jb-border-strong: rgba(255,255,255,.16);
+            --jb-text: rgba(255,255,255,.9);
+            --jb-text-dim: rgba(255,255,255,.55);
+            --jb-text-faint: rgba(255,255,255,.35);
+            --jb-blue: #A855F7;
+            --jb-blue-hi: #C084FC;
+        }
+        html, body { height: 100%; }
+        body {
+            background: var(--jb-bg);
+            font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--jb-text);
+            font-size: 15px;
+        }
+        body::after {
+            content: ''; position: fixed; inset: 0;
+            pointer-events: none; z-index: 0;
+            background-image:
+                radial-gradient(50% 38% at 85% -5%, rgba(168,85,247,.15), transparent 70%),
+                radial-gradient(45% 45% at -5% 105%, rgba(124,58,237,.12), transparent 70%),
+                radial-gradient(30% 30% at 12% 22%, rgba(59,130,246,.05), transparent 70%);
+        }
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            pointer-events: none; z-index: 0; opacity: .55;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.04'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+        .sidebar { z-index: 2; }
+        .main-content { position: relative; z-index: 1; }
+
+        .sidebar {
+            min-height: 100vh;
+            background: #0B0B0D;
+            border-right: 1px solid var(--jb-border);
+            position: relative;
+        }
+        .side-logo {
+            display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+            padding: 18px 22px 16px;
+            border-bottom: 1px solid var(--jb-border);
+            margin-bottom: 12px;
+        }
+        .side-logo .logo-wordmark {
+            font-family: "Space Grotesk", "Inter", sans-serif;
+            font-size: 24px; font-weight: 700; letter-spacing: 4px;
+            color: #fff; line-height: 1;
+        }
+        .side-logo .logo-wordmark em { color: #A855F7; font-style: normal; }
+        .side-logo .logo-name {
+            color: var(--jb-text-dim); font-size: 11px;
+            letter-spacing: 3px; white-space: nowrap;
+        }
+        .side-section {
+            padding: 14px 22px 6px;
+            font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
+            color: var(--jb-text-faint); text-transform: uppercase;
+        }
+        .sidebar a {
+            position: relative;
+            color: var(--jb-text-dim); text-decoration: none;
+            padding: 10px 16px 10px 22px; display: flex; align-items: center; gap: 10px;
+            margin: 1px 0;
+            font-size: 14px; font-weight: 500;
+            transition: all .15s ease;
+        }
+        .sidebar a i { font-size: 16px; width: 20px; text-align: center; color: rgba(255,255,255,.45); }
+        .sidebar a:hover { color: #fff; background: rgba(255,255,255,.06); }
+        .sidebar a:hover i, .sidebar a.active i { color: #C084FC; }
+        .sidebar a.active { color: #fff; background: rgba(255,255,255,.09); }
+        .sidebar a::before {
+            content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
+            border-radius: 0 2px 2px 0; background: var(--jb-blue);
+            opacity: 0;
+            transition: opacity .2s ease;
+        }
+        .sidebar a.active::before { opacity: 1; }
+        .side-bottom {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            border-top: 1px solid var(--jb-border);
+            padding-bottom: 8px;
+        }
+        .side-user {
+            padding: 10px 22px 6px;
+        }
+        .side-user-name {
+            color: var(--jb-text); font-size: 13px; font-weight: 600; line-height: 1.4;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .side-user-meta {
+            color: var(--jb-text-faint); font-size: 11px; line-height: 1.5;
+            margin-top: 2px;
+            overflow-wrap: anywhere; word-break: break-all;
+        }
+        .side-producer {
+            padding: 8px 22px 6px;
+            font-size: 11px; line-height: 1.6;
+            color: rgba(255,255,255,.25);
+            white-space: nowrap;
+        }
+
+        /* ===== 全局轻提示：底部居中，自动消失 ===== */
+        .ui-toast-host {
+            position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+            z-index: 20000; display: flex; flex-direction: column-reverse; align-items: center;
+            gap: 10px; pointer-events: none;
+        }
+        .ui-toast {
+            pointer-events: auto;
+            display: flex; align-items: center; gap: 10px;
+            min-width: 220px; max-width: 440px;
+            padding: 11px 14px 11px 16px;
+            background: #1D1D22;
+            border: 1px solid rgba(255,255,255,.12);
+            border-left: 3px solid var(--jb-blue);
+            border-radius: 10px;
+            box-shadow: 0 12px 34px rgba(0,0,0,.5);
+            color: var(--jb-text);
+            font-size: 13.5px; line-height: 1.5;
+            animation: toastIn .22s ease both;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+        .ui-toast.hide { opacity: 0; transform: translateY(6px); }
+        .ui-toast > i { font-size: 16px; flex: none; }
+        .ui-toast-msg { overflow-wrap: anywhere; }
+        .ui-toast-close {
+            margin-left: auto; background: none; border: 0; padding: 2px 0 2px 8px;
+            color: rgba(255,255,255,.35); font-size: 12px; line-height: 1; cursor: pointer;
+        }
+        .ui-toast-close:hover { color: #fff; }
+        .ui-toast.success { border-left-color: #3ECA63; }
+        .ui-toast.success > i { color: #3ECA63; }
+        .ui-toast.danger { border-left-color: #FF6B6B; }
+        .ui-toast.danger > i { color: #FF6B6B; }
+        .ui-toast.warning { border-left-color: #FFB400; }
+        .ui-toast.warning > i { color: #FFB400; }
+        .ui-toast.info { border-left-color: var(--jb-blue); }
+        .ui-toast.info > i { color: var(--jb-blue-hi); }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .main-content { padding: 32px; }
+        .main-content h4, .main-content h5, .main-content h6 { color: #fff; }
+
+        .card {
+            border: 1px solid var(--jb-border);
+            border-radius: 12px;
+            background: var(--jb-panel);
+            box-shadow: 0 4px 20px rgba(0,0,0,.25);
+            overflow: hidden;
+            transition: box-shadow .25s ease, border-color .25s ease;
+        }
+        .card:hover { border-color: rgba(255,255,255,.16); box-shadow: 0 10px 32px rgba(0,0,0,.38); }
+        .card-header {
+            background: var(--jb-panel-2) !important;
+            border-bottom: 1px solid var(--jb-border) !important;
+            color: var(--jb-text);
+        }
+        .card-footer { border-top: 1px solid var(--jb-border) !important; background: var(--jb-panel) !important; }
+
+        .table { --bs-table-bg: transparent; --bs-table-color: var(--jb-text); color: var(--jb-text); }
+        .table th {
+            background: rgba(255,255,255,.03);
+            color: var(--jb-text-dim); font-weight: 600; font-size: 13px;
+            border-color: var(--jb-border) !important;
+        }
+        .table td { border-color: rgba(255,255,255,.06) !important; }
+        .table > :not(caption) > * > * { background: transparent; }
+        .table-hover > tbody > tr:hover > * { background: rgba(255,255,255,.04); }
+
+        .form-control, .form-select {
+            background-color: var(--jb-input);
+            border: 1px solid #3C3F41;
+            color: #fff; border-radius: 8px;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: var(--jb-input);
+            border-color: var(--jb-blue); color: #fff;
+            box-shadow: 0 0 0 .2rem rgba(168,85,247,.25);
+        }
+        .form-control::placeholder { color: var(--jb-text-faint); }
+        .form-label, .form-text { color: var(--jb-text-dim) !important; }
+
+        .btn { border-radius: 8px; font-weight: 500; }
+        .btn-primary { background: var(--jb-blue); border-color: var(--jb-blue); }
+        .btn-primary:hover { background: var(--jb-blue-hi); border-color: var(--jb-blue-hi); }
+        .btn-outline-primary { color: var(--jb-blue-hi); border-color: rgba(168,85,247,.6); }
+        .btn-outline-primary:hover { background: var(--jb-blue); border-color: var(--jb-blue); }
+        .btn-outline-secondary { color: var(--jb-text-dim); border-color: var(--jb-border-strong); }
+        .btn-outline-secondary:hover { background: rgba(255,255,255,.08); border-color: var(--jb-border-strong); color: #fff; }
+
+        a { color: var(--jb-blue-hi); }
+        a:hover { color: #D8B4FE; }
+        .text-muted { color: var(--jb-text-faint) !important; }
+        .alert { border-radius: 10px; border-width: 1px; }
+        .alert-danger { background: rgba(254,40,87,.1); border-color: rgba(254,40,87,.3); color: #FF8FA8; }
+        .alert-info { background: rgba(168,85,247,.1); border-color: rgba(168,85,247,.3); color: #D8B4FE; }
+
+        .page-link { background: var(--jb-panel); border-color: var(--jb-border); color: var(--jb-text-dim); }
+        .page-link:hover { background: rgba(255,255,255,.07); color: #fff; border-color: var(--jb-border); }
+        .page-item.active .page-link { background: var(--jb-blue); border-color: var(--jb-blue); color: #fff; }
+        .page-item.disabled .page-link { background: var(--jb-panel); border-color: var(--jb-border); color: var(--jb-text-faint); }
+
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: var(--jb-bg); }
+        ::-webkit-scrollbar-thumb { background: #3C3F41; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4E5154; }
+    </style>
+    {block name="head"}{/block}
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <nav class="col-md-2 d-none d-md-block sidebar p-0">
+            <div class="side-logo">
+                <div class="logo-wordmark">QTS<em>.</em></div>
+                <div class="logo-name">抽题系统</div>
+            </div>
+            <?php $__seg = explode('/', strtolower(request()->pathinfo())); $cur = $__seg[1] ?? ''; ?>
+
+            <div class="side-section">学生功能</div>
+            <a href="/student/draw" class="<?php echo $cur==='draw' ? 'active' : ''; ?>">
+                <i class="bi bi-shuffle"></i> 随机抽题
+            </a>
+            <a href="/student/records" class="<?php echo $cur==='records' ? 'active' : ''; ?>">
+                <i class="bi bi-clock-history"></i> 抽题记录
+            </a>
+
+            <div class="side-bottom">
+                <div class="side-user">
+                    <div class="side-user-name"><?php echo htmlspecialchars($_SESSION['student_user']['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
+                    <div class="side-user-meta">学号 <?php echo htmlspecialchars($_SESSION['student_user']['student_no'] ?? '', ENT_QUOTES, 'UTF-8'); ?></div>
+                </div>
+                <a href="/"><i class="bi bi-house"></i> 返回门户</a>
+                <a href="/student/logout"><i class="bi bi-box-arrow-right"></i> 退出登录</a>
+                <div class="side-producer">软件工程教研室 李嘉哲</div>
+            </div>
+        </nav>
+        <main class="col-md-10 main-content">
+            {block name="content"}{/block}
+        </main>
+    </div>
+</div>
+
+<div class="ui-toast-host" id="toastHost" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+var UI_TOAST_ICONS = {
+    success: 'bi-check-circle-fill',
+    danger: 'bi-x-circle-fill',
+    warning: 'bi-exclamation-triangle-fill',
+    info: 'bi-info-circle-fill'
+};
+
+function showAlert(msg, type) {
+    type = type || 'success';
+    var host = document.getElementById('toastHost');
+    var toast = document.createElement('div');
+    toast.className = 'ui-toast ' + type;
+    toast.innerHTML = '<i class="bi ' + (UI_TOAST_ICONS[type] || UI_TOAST_ICONS.info) + '"></i>'
+        + '<span class="ui-toast-msg"></span>'
+        + '<button type="button" class="ui-toast-close" aria-label="关闭"><i class="bi bi-x-lg"></i></button>';
+    toast.querySelector('.ui-toast-msg').textContent = msg;
+    var timer = setTimeout(function () { removeToast(toast); }, 3200);
+    toast.querySelector('.ui-toast-close').addEventListener('click', function () {
+        clearTimeout(timer);
+        removeToast(toast);
+    });
+    host.appendChild(toast);
+}
+
+function removeToast(toast) {
+    if (!toast.parentNode) return;
+    toast.classList.add('hide');
+    setTimeout(function () { toast.remove(); }, 200);
+}
+</script>
+{block name="js"}{/block}
+</body>
+</html>

@@ -18,7 +18,7 @@ class AdminAuth
             if ($request->isAjax() || $request->isJson()) {
                 return json(['code' => 401, 'msg' => '未登录，请先登录']);
             }
-            return redirect((string) url('admin/Login/index'));
+            return redirect('/admin/login');
         }
         return $next($request);
     }

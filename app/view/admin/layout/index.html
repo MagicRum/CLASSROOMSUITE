@@ -214,6 +214,77 @@
         ::-webkit-scrollbar-track { background: var(--jb-bg); }
         ::-webkit-scrollbar-thumb { background: #3C3F41; border-radius: 5px; }
         ::-webkit-scrollbar-thumb:hover { background: #4E5154; }
+
+        /* ===== 全局轻提示：底部居中，自动消失 ===== */
+        .ui-toast-host {
+            position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+            z-index: 20000; display: flex; flex-direction: column-reverse; align-items: center;
+            gap: 10px; pointer-events: none;
+        }
+        .ui-toast {
+            pointer-events: auto;
+            display: flex; align-items: center; gap: 10px;
+            min-width: 220px; max-width: 440px;
+            padding: 11px 14px 11px 16px;
+            background: #1D1D22;
+            border: 1px solid rgba(255,255,255,.12);
+            border-left: 3px solid var(--jb-blue);
+            border-radius: 10px;
+            box-shadow: 0 12px 34px rgba(0,0,0,.5);
+            color: var(--jb-text);
+            font-size: 13.5px; line-height: 1.5;
+            animation: toastIn .22s ease both;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+        .ui-toast.hide { opacity: 0; transform: translateY(6px); }
+        .ui-toast > i { font-size: 16px; flex: none; }
+        .ui-toast-msg { overflow-wrap: anywhere; }
+        .ui-toast-close {
+            margin-left: auto; background: none; border: 0; padding: 2px 0 2px 8px;
+            color: rgba(255,255,255,.35); font-size: 12px; line-height: 1; cursor: pointer;
+        }
+        .ui-toast-close:hover { color: #fff; }
+        .ui-toast.success { border-left-color: #3ECA63; }
+        .ui-toast.success > i { color: #3ECA63; }
+        .ui-toast.danger { border-left-color: #FF6B6B; }
+        .ui-toast.danger > i { color: #FF6B6B; }
+        .ui-toast.warning { border-left-color: #FFB400; }
+        .ui-toast.warning > i { color: #FFB400; }
+        .ui-toast.info { border-left-color: var(--jb-blue); }
+        .ui-toast.info > i { color: var(--jb-blue-hi); }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== 确认对话框 ===== */
+        .ui-mask {
+            position: fixed; inset: 0; z-index: 20001;
+            display: none; align-items: center; justify-content: center;
+            padding: 20px;
+            background: rgba(0,0,0,.55);
+            backdrop-filter: blur(2px);
+        }
+        .ui-mask.show { display: flex; }
+        .ui-dialog {
+            width: 100%; max-width: 380px;
+            padding: 22px 22px 18px;
+            background: #1D1D22;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 14px;
+            box-shadow: 0 28px 70px rgba(0,0,0,.55);
+            animation: dialogIn .18s ease both;
+        }
+        @keyframes dialogIn {
+            from { opacity: 0; transform: translateY(8px) scale(.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .ui-dialog-title { color: #fff; font-size: 15px; font-weight: 600; letter-spacing: .5px; }
+        .ui-dialog-msg { margin-top: 8px; color: var(--jb-text-dim); font-size: 13px; line-height: 1.7; }
+        .ui-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+        .ui-dialog-actions .btn { min-width: 76px; }
+        .btn-danger { background: #E5534B; border-color: #E5534B; }
+        .btn-danger:hover { background: #F06A62; border-color: #F06A62; }
     </style>
     {block name="head"}{/block}
 </head>
@@ -253,8 +324,14 @@
                 <i class="bi bi-journal-text"></i> 试题管理
             </a>
 
+            <div class="side-section">系统</div>
+            <a href="/admin/setting" class="<?php echo $cur==='setting' ? 'active' : ''; ?>">
+                <i class="bi bi-gear"></i> 系统设置
+            </a>
+
             <div class="side-bottom">
-                <a href="/admin/Login/logout"><i class="bi bi-box-arrow-right"></i> 退出登录</a>
+                <a href="/"><i class="bi bi-house"></i> 返回门户</a>
+                <a href="/admin/logout"><i class="bi bi-box-arrow-right"></i> 退出登录</a>
                 <div class="side-producer">软件工程教研室 李嘉哲</div>
             </div>
         </nav>
@@ -265,17 +342,86 @@
     </div>
 </div>
 
+<div class="ui-toast-host" id="toastHost" aria-live="polite"></div>
+
+<div class="ui-mask" id="uiDialogMask">
+    <div class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="uiDialogTitle">
+        <div class="ui-dialog-title" id="uiDialogTitle">操作确认</div>
+        <div class="ui-dialog-msg" id="uiDialogMsg"></div>
+        <div class="ui-dialog-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="uiDialogCancel">取消</button>
+            <button type="button" class="btn btn-sm btn-primary" id="uiDialogOk">确定</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function showAlert(msg, type='success') {
-    var div = document.createElement('div');
-    div.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed';
-    div.style.cssText = 'top:20px;right:20px;z-index:9999;min-width:250px;';
-    div.innerHTML = msg + '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>';
-    document.body.appendChild(div);
-    setTimeout(function(){ div.remove(); }, 3000);
+var UI_TOAST_ICONS = {
+    success: 'bi-check-circle-fill',
+    danger: 'bi-x-circle-fill',
+    warning: 'bi-exclamation-triangle-fill',
+    info: 'bi-info-circle-fill'
+};
+
+function showAlert(msg, type) {
+    type = type || 'success';
+    var host = document.getElementById('toastHost');
+    var toast = document.createElement('div');
+    toast.className = 'ui-toast ' + type;
+    toast.innerHTML = '<i class="bi ' + (UI_TOAST_ICONS[type] || UI_TOAST_ICONS.info) + '"></i>'
+        + '<span class="ui-toast-msg"></span>'
+        + '<button type="button" class="ui-toast-close" aria-label="关闭"><i class="bi bi-x-lg"></i></button>';
+    toast.querySelector('.ui-toast-msg').textContent = msg;
+    var timer = setTimeout(function () { removeToast(toast); }, 3200);
+    toast.querySelector('.ui-toast-close').addEventListener('click', function () {
+        clearTimeout(timer);
+        removeToast(toast);
+    });
+    host.appendChild(toast);
 }
-function confirmAction(msg) { return confirm(msg); }
+
+function removeToast(toast) {
+    if (!toast.parentNode) return;
+    toast.classList.add('hide');
+    setTimeout(function () { toast.remove(); }, 200);
+}
+
+function confirmAction(message, options) {
+    options = options || {};
+    return new Promise(function (resolve) {
+        var mask = document.getElementById('uiDialogMask');
+        var okBtn = document.getElementById('uiDialogOk');
+        var cancelBtn = document.getElementById('uiDialogCancel');
+        document.getElementById('uiDialogTitle').textContent = options.title || '操作确认';
+        document.getElementById('uiDialogMsg').textContent = message;
+        var originalClass = options.danger ? 'btn btn-sm btn-danger' : 'btn btn-sm btn-primary';
+        okBtn.className = originalClass;
+        okBtn.textContent = options.okText || '确定';
+
+        function close(result) {
+            mask.classList.remove('show');
+            document.body.style.overflow = '';
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            mask.removeEventListener('click', onMask);
+            document.removeEventListener('keydown', onKey);
+            resolve(result);
+        }
+        function onOk() { close(true); }
+        function onCancel() { close(false); }
+        function onMask(e) { if (e.target === mask) close(false); }
+        function onKey(e) { if (e.key === 'Escape') close(false); }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        mask.addEventListener('click', onMask);
+        document.addEventListener('keydown', onKey);
+        document.body.style.overflow = 'hidden';
+        mask.classList.add('show');
+        okBtn.focus();
+    });
+}
 </script>
 {block name="js"}{/block}
 </body>

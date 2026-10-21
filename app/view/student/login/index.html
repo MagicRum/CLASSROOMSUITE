@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>学生登录 - 抽题系统</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/400.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/500.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/600.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/space-grotesk@5.0.16/700.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/400.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/500.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.5/700.css" rel="stylesheet">
+<style>
+    :root {
+        --jb-bg: #101013;
+        --jb-panel: #1E1F22;
+        --jb-input: #222227;
+        --jb-border: rgba(255,255,255,.09);
+        --jb-text: rgba(255,255,255,.9);
+        --jb-text-dim: rgba(255,255,255,.55);
+        --jb-text-faint: rgba(255,255,255,.35);
+        --jb-blue: #A855F7;
+        --jb-blue-hi: #C084FC;
+    }
+    html, body { height: 100%; }
+    body {
+        min-height: 100vh; display: flex; align-items: center;
+        background: var(--jb-bg);
+        font-family: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--jb-text);
+    }
+    body::before {
+        content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+        background-image:
+            radial-gradient(50% 38% at 85% -5%, rgba(168,85,247,.15), transparent 70%),
+            radial-gradient(45% 45% at -5% 105%, rgba(124,58,237,.12), transparent 70%),
+            radial-gradient(30% 30% at 12% 22%, rgba(59,130,246,.05), transparent 70%);
+    }
+    body::after {
+        content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .55;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.04'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .login-card {
+        position: relative; z-index: 1;
+        width: 420px; margin: auto;
+        border: 1px solid var(--jb-border); border-radius: 16px;
+        background: var(--jb-panel);
+        box-shadow: 0 24px 70px rgba(0,0,0,.45);
+        animation: cardIn .6s cubic-bezier(.22,.8,.36,1) both;
+    }
+    @keyframes cardIn {
+        0% { opacity: 0; transform: translateY(24px) scale(.97); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .login-card .card-body { padding: 40px; }
+    .login-logo {
+        font-family: "Space Grotesk", "Inter", sans-serif;
+        font-size: 40px; font-weight: 700; letter-spacing: 7px;
+        color: #fff; line-height: 1; margin: 0 auto;
+    }
+    .login-logo em { color: var(--jb-blue); font-style: normal; }
+    .login-card h3 { color: #fff; font-weight: 700; }
+    .form-label { color: var(--jb-text-dim); font-size: 13px; }
+    .form-control {
+        background-color: var(--jb-input); border: 1px solid #3C3F41;
+        color: #fff; border-radius: 8px; padding: 12px 16px;
+    }
+    .form-control:focus {
+        background-color: var(--jb-input); border-color: var(--jb-blue);
+        color: #fff; box-shadow: 0 0 0 .2rem rgba(168,85,247,.25);
+    }
+    .form-control::placeholder { color: var(--jb-text-faint); }
+    .btn-primary {
+        background: var(--jb-blue); border-color: var(--jb-blue);
+        border-radius: 8px; font-weight: 600;
+    }
+    .btn-primary:hover { background: var(--jb-blue-hi); border-color: var(--jb-blue-hi); }
+    .switch-link { color: var(--jb-text-dim); font-size: 13px; text-decoration: none; }
+    .switch-link:hover { color: #fff; }
+</style>
+</head>
+<body>
+<div class="login-card card">
+    <div class="card-body">
+        <div class="text-center mb-4">
+            <div class="login-logo">QTS<em>.</em></div>
+            <h3 class="mt-3">抽题系统</h3>
+            <p class="mb-0" style="color:rgba(255,255,255,.5);">学生登录</p>
+        </div>
+
+        <div id="tips"></div>
+
+        <form id="loginForm" autocomplete="off">
+            <div class="mb-3">
+                <label class="form-label">学号</label>
+                <input type="text" name="student_no" class="form-control" placeholder="请输入学号" maxlength="32" required>
+            </div>
+            <div class="mb-4">
+                <label class="form-label">密码</label>
+                <input type="password" name="password" class="form-control" placeholder="请输入密码" maxlength="32" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2">登录</button>
+        </form>
+
+        <div class="d-flex justify-content-between mt-4">
+            <a href="/student/register" class="switch-link">注册 / 设置密码</a>
+            <a href="/admin/login" class="switch-link">教师登录</a>
+            <a href="/" class="switch-link">返回首页</a>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var params = new URLSearchParams(location.search);
+    if (params.get('registered') === '1') {
+        document.getElementById('tips').innerHTML = '<div class="alert alert-success mb-3" style="border-radius:10px;background:rgba(62,202,99,.1);border:1px solid rgba(62,202,99,.3);color:#7FE89A;">注册成功，请使用学号与密码登录</div>';
+        history.replaceState(null, '', '/student/login');
+    }
+})();
+
+document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var form = this;
+    var btn = form.querySelector('button[type="submit"]');
+    var tips = document.getElementById('tips');
+    btn.disabled = true; btn.textContent = '登录中...';
+
+    fetch('/student/login/doLogin', { method: 'POST', body: new FormData(form) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            btn.disabled = false; btn.textContent = '登录';
+            if (data.code === 1) {
+                location.href = data.url;
+            } else {
+                tips.innerHTML = '<div class="alert alert-danger mb-3" style="border-radius:10px;background:rgba(254,40,87,.1);border:1px solid rgba(254,40,87,.3);color:#FF8FA8;">' + data.msg + '</div>';
+            }
+        })
+        .catch(function () {
+            btn.disabled = false; btn.textContent = '登录';
+            tips.innerHTML = '<div class="alert alert-danger mb-3">网络错误，请稍后重试</div>';
+        });
+});
+</script>
+</body>
+</html>

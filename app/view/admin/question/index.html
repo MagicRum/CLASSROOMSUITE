@@ -65,7 +65,7 @@
                     <td><span class="badge bg-success">{$item.correct_answer}</span></td>
                     <td>
                         <a class="btn btn-sm btn-outline-primary" href="/admin/question/edit?id=<?php echo $item['id']; ?>"><i class="bi bi-pencil"></i></a>
-                        <a class="btn btn-sm btn-outline-danger" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
                 {/volist}
@@ -80,8 +80,8 @@
 {/block}
 {block name="js"}
 <script>
-function delItem(id){
-    if(!confirmAction('确认删除？')) return;
+async function delItem(id){
+    if(!await confirmAction('确认删除该试题？删除后不可恢复。', {danger:true, okText:'删除'})) return;
     fetch('/admin/Question/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id})
         .then(r=>r.json()).then(d=>{
             showAlert(d.msg,d.code===1?'success':'danger');

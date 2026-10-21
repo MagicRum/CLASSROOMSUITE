@@ -1,0 +1,31 @@
+{extend name="admin/layout/index" /}
+{block name="title"}系统设置{/block}
+{block name="content"}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">系统设置</h4>
+</div>
+
+<div class="card" style="max-width:640px;">
+    <div class="card-body">
+        <form id="settingForm">
+            <div class="mb-2">
+                <label class="form-label">系统名称</label>
+                <input type="text" name="system_name" class="form-control" value="{$systemName}" maxlength="20" placeholder="如 软件工程教研室" required>
+                <div class="form-text">显示为「{$systemName}管理系统」，用于门户首页标题。</div>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-check2"></i> 保存</button>
+        </form>
+    </div>
+</div>
+{/block}
+{block name="js"}
+<script>
+document.getElementById('settingForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    fetch('/admin/setting/save', {method:'POST', body:new FormData(this)})
+        .then(function(r){ return r.json(); }).then(function(d){
+            showAlert(d.msg, d.code===1 ? 'success' : 'danger');
+        });
+});
+</script>
+{/block}

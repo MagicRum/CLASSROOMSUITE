@@ -40,7 +40,7 @@
                     <td><span class="badge bg-primary">{$item.student_count}人</span></td>
                     <td>
                         <a class="btn btn-sm btn-outline-primary" onclick="editItem({$item.id}, '{$item.class_name}')"><i class="bi bi-pencil"></i></a>
-                        <a class="btn btn-sm btn-outline-danger" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
                 {/volist}
@@ -75,8 +75,8 @@ function resetForm(){
     document.getElementById('submitText').textContent = '添加班级';
     document.getElementById('cancelEdit').style.display = 'none';
 }
-function delItem(id){
-    if(!confirmAction('确认删除该班级？')) return;
+async function delItem(id){
+    if(!await confirmAction('确认删除该班级？班级下仍有学生时无法删除。', {danger:true, okText:'删除'})) return;
     fetch('/admin/clazz/delete', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'id='+id})
         .then(function(r){ return r.json(); }).then(function(d){
             showAlert(d.msg, d.code===1 ? 'success' : 'danger');
