@@ -670,7 +670,8 @@ class JudgeService
             // ulimit -f 按 512 字节块限制单个文件大小，避免无限输出写满磁盘
             $inner = 'ulimit -v ' . $vmLimit . '; ulimit -f ' . intval(self::MAX_OUTPUT_BYTES / 512) . '; exec ' . $runBase
                 . ' < ' . self::q($inFile) . ' > ' . self::q($outFile) . ' 2> ' . self::q($errFile);
-            $cmd = 'bash -c ' . self::q($inner);
+            // php-fpm 可能清空 PATH，导致 bash 无法按名解析，这里使用绝对路径
+            $cmd = self::q(self::shellBinary()) . ' -c ' . self::q($inner);
         }
 
         $null = $isWin ? 'NUL' : '/dev/null';
@@ -903,7 +904,45 @@ class JudgeService
         }
         $env['PYTHONIOENCODING'] = 'utf-8';
         $env['PYTHONUTF8'] = '1';
+        // php-fpm 的 clear_env 会清空 PATH，导致子进程找不到系统命令
+        if (DIRECTORY_SEPARATOR !== '\\') {
+            $path = isset($env['PATH']) ? (string) $env['PATH'] : '';
+            $base = self::basePath();
+            foreach (array_reverse(explode(':', $base)) as $dir) {
+                if ($dir !== '' && strpos(':' . $path . ':', ':' . $dir . ':') === false) {
+                    $path = $path === '' ? $dir : $path . ':' . $dir;
+                }
+            }
+            $env['PATH'] = $path;
+        }
         return $env;
+    }
+
+    /**
+     * Linux 常规可执行目录，用于补齐被清空的 PATH
+     */
+    protected static function basePath()
+    {
+        $default = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+        $path = getenv('PATH');
+        return ($path === false || trim((string) $path) === '') ? $default : (string) $path;
+    }
+
+    /**
+     * 定位 shell 可执行文件（php-fpm 清空 PATH 后无法按名找到 bash）
+     */
+    protected static function shellBinary()
+    {
+        static $shell = null;
+        if ($shell !== null) {
+            return $shell;
+        }
+        foreach (['/bin/bash', '/usr/bin/bash', '/bin/sh'] as $item) {
+            if (@is_file($item)) {
+                return $shell = $item;
+            }
+        }
+        return $shell = 'sh';
     }
 
     /**
@@ -918,9 +957,11 @@ class JudgeService
         }
         $sep = DIRECTORY_SEPARATOR === '\\' ? ';' : ':';
         $path = getenv('PATH');
-        if ($path === false || $path === null) {
-            $path = '';
+        if ($path === false || $path === null || trim((string) $path) === '') {
+            // php-fpm 可能清空 PATH，不能只保留编译器目录，否则找不到 as/ld 等系统工具
+            $path = self::basePath();
         }
+        $path = (string) $path;
         $parts = $path === '' ? [] : explode($sep, $path);
         if (in_array($dir, $parts, true)) {
             return;
