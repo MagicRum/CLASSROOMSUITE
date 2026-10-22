@@ -1,92 +1,381 @@
 {extend name="admin/layout/index" /}
 {block name="title"}试题管理{/block}
+{block name="head"}
+<style>
+.qs-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; margin-bottom: 18px;
+}
+.qs-toolbar h4 { margin: 0; }
+.qs-actions { display: flex; gap: 8px; }
+
+.qs-filter {
+    padding: 16px 18px; margin-bottom: 18px;
+    background: var(--jb-panel); border: 1px solid var(--jb-border); border-radius: 12px;
+    display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+}
+.qs-filter .qf-item {
+    display: flex; flex-direction: column; gap: 4px; min-width: 140px;
+}
+.qs-filter .qf-item.qf-keyword { flex: 1; min-width: 240px; }
+.qs-filter label { font-size: 11px; color: var(--jb-text-faint); text-transform: uppercase; letter-spacing: .6px; font-weight: 500; }
+.qs-filter .qf-buttons { display: flex; gap: 8px; }
+
+.qs-card {
+    background: var(--jb-panel); border: 1px solid var(--jb-border); border-radius: 12px; overflow: hidden;
+}
+
+.qs-table-header {
+    display: grid;
+    grid-template-columns: 56px 1.4fr 110px 1fr 80px 76px 80px 120px;
+    gap: 0;
+    padding: 12px 16px;
+    background: var(--jb-panel-2);
+    border-bottom: 1px solid var(--jb-border);
+    font-size: 11.5px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--jb-text-faint);
+}
+.qs-table-row {
+    display: grid;
+    grid-template-columns: 56px 1.4fr 110px 1fr 80px 76px 80px 120px;
+    gap: 0;
+    align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    transition: background .15s ease;
+    cursor: pointer;
+}
+.qs-table-row:hover { background: rgba(255,255,255,.04); }
+.qs-table-row:last-child { border-bottom: none; }
+
+.qs-col-id { color: var(--jb-text-faint); font-family: "Space Grotesk", monospace; font-size: 13px; }
+.qs-col-title {
+    color: #fff; font-weight: 500; font-size: 14px;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    line-height: 1.5;
+}
+.qs-col-title .qtype-badge { margin-left: 8px; }
+
+.qs-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 10px;
+    font-size: 11.5px; font-weight: 500; letter-spacing: .2px;
+}
+.qs-badge.type-1 { background: rgba(168,85,247,.15); color: var(--jb-blue-hi); }
+.qs-badge.type-2 { background: rgba(99,102,241,.18); color: #A5B4FC; }
+.qs-badge.type-3 { background: rgba(16,185,129,.15); color: #6EE7B7; }
+.qs-badge.type-4 { background: rgba(245,158,11,.15); color: #FCD34D; }
+.qs-badge.type-5 { background: rgba(236,72,153,.15); color: #F9A8D4; }
+
+.qs-badge.diff-1 { background: rgba(99,102,241,.15); color: #A5B4FC; }
+.qs-badge.diff-2 { background: rgba(16,185,129,.15); color: #6EE7B7; }
+.qs-badge.diff-3 { background: rgba(239,68,68,.15); color: #FCA5A5; }
+
+.qs-col-cat {
+    font-size: 12.5px; color: var(--jb-text-dim);
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+
+.qs-col-ans {
+    font-family: "Space Grotesk", monospace; font-size: 13px; font-weight: 600;
+    color: var(--jb-blue-hi); letter-spacing: .5px;
+}
+.qs-col-score {
+    font-family: "Space Grotesk", sans-serif; font-size: 14px;
+    color: var(--jb-text); font-weight: 500; text-align: center;
+}
+
+.qs-col-actions {
+    display: flex; gap: 6px; align-items: center; justify-content: flex-end;
+}
+.qs-col-actions .btn {
+    padding: 4px 10px; font-size: 12px; line-height: 1.2;
+    border-radius: 6px;
+}
+
+.qs-empty {
+    padding: 60px 20px; text-align: center;
+    color: var(--jb-text-faint);
+}
+.qs-empty i { font-size: 42px; color: rgba(255,255,255,.15); margin-bottom: 14px; display: block; }
+.qs-empty .qe-msg { font-size: 14px; margin-bottom: 16px; }
+
+.qs-footer {
+    padding: 14px 18px; border-top: 1px solid var(--jb-border);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: var(--jb-text-dim);
+}
+.qs-footer .pagination { margin: 0; }
+
+/* 详情预览 */
+.qs-detail-mask {
+    position: fixed; inset: 0; z-index: 19000;
+    display: none; align-items: center; justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(2px);
+}
+.qs-detail-mask.show { display: flex; }
+.qs-detail {
+    width: 100%; max-width: 720px; max-height: 85vh; overflow-y: auto;
+    background: #1D1D22; border: 1px solid rgba(255,255,255,.12); border-radius: 14px;
+    box-shadow: 0 28px 70px rgba(0,0,0,.55);
+    animation: dialogIn .18s ease both;
+}
+.qs-detail-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--jb-border);
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+}
+.qs-detail-title {
+    color: #fff; font-size: 15px; font-weight: 600; line-height: 1.5;
+    flex: 1;
+}
+.qs-detail-body { padding: 20px; }
+.qs-detail-row {
+    display: grid; grid-template-columns: 90px 1fr; gap: 12px 16px;
+    font-size: 13px; margin-bottom: 12px;
+}
+.qs-detail-row dt { color: var(--jb-text-faint); text-transform: uppercase; letter-spacing: .5px; font-size: 11px; padding-top: 1px; }
+.qs-detail-row dd { color: var(--jb-text); margin: 0; line-height: 1.6; }
+
+.qs-option {
+    padding: 10px 12px; margin-bottom: 8px;
+    background: var(--jb-panel); border: 1px solid var(--jb-border); border-radius: 8px;
+    display: flex; align-items: flex-start; gap: 10px;
+}
+.qs-option .qol-letter {
+    font-family: "Space Grotesk", sans-serif; font-weight: 700;
+    color: var(--jb-blue-hi); width: 22px; flex: none; text-align: center;
+}
+.qs-option .qol-text { color: var(--jb-text); font-size: 13.5px; line-height: 1.6; flex: 1; }
+.qs-ans-block {
+    margin-top: 10px; padding: 12px 14px;
+    background: rgba(168,85,247,.1); border: 1px solid rgba(168,85,247,.3);
+    border-radius: 8px; color: #D8B4FE; font-size: 13.5px; line-height: 1.6;
+}
+
+@media (max-width: 1200px) {
+    .qs-table-header, .qs-table-row { grid-template-columns: 48px 1.4fr 100px 1fr 72px 68px 72px 110px; }
+}
+@media (max-width: 992px) {
+    .qs-table-header, .qs-table-row {
+        grid-template-columns: 48px 1fr 80px 80px 80px;
+        font-size: 13px;
+    }
+    .qs-col-cat, .qs-col-ans, .qs-col-score { display: none; }
+}
+</style>
+{/block}
 {block name="content"}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="qs-toolbar">
     <h4 class="mb-0">试题管理</h4>
-    <div>
-        <a class="btn btn-success" href="/admin/Question/import"><i class="bi bi-file-earmark-spreadsheet"></i> Excel导入</a>
-        <a class="btn btn-primary" href="/admin/Question/edit"><i class="bi bi-plus-lg"></i> 添加试题</a>
+    <div class="qs-actions">
+        <a class="btn btn-outline-secondary btn-sm" href="/admin/Question/template"><i class="bi bi-download"></i> 下载模板</a>
+        <a class="btn btn-outline-primary btn-sm" href="/admin/Question/import"><i class="bi bi-file-earmark-spreadsheet"></i> Excel 导入</a>
+        <a class="btn btn-primary btn-sm" href="/admin/Question/edit"><i class="bi bi-plus-lg"></i> 添加试题</a>
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-2">
-                <label class="form-label small">题型</label>
-                <select name="question_type" class="form-select">
-                    <option value="">全部</option>
-                    {volist name="typeMap" id="v" key="k"}
-                    <option value="{$k}" {if $question_type==$k}selected{/if}>{$v}</option>
-                    {/volist}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small">难度</label>
-                <select name="difficulty" class="form-select">
-                    <option value="">全部</option>
-                    {volist name="difficultyMap" id="v" key="k"}
-                    <option value="{$k}" {if $difficulty==$k}selected{/if}>{$v}</option>
-                    {/volist}
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small">题目关键字</label>
-                <input type="text" name="keyword" value="{$keyword}" class="form-control" placeholder="搜索题目内容">
-            </div>
-            <div class="col-md-auto">
-                <button class="btn btn-primary">搜索</button>
-                <a class="btn btn-outline-secondary" href="/admin/Question/index">重置</a>
-            </div>
-        </form>
+<!-- 筛选区 -->
+<form method="get" class="qs-filter">
+    <div class="qf-item">
+        <label>题型</label>
+        <select name="question_type" class="form-select">
+            <option value="">全部</option>
+            {volist name="typeMap" id="v" key="k"}
+            <option value="{$k}" {if $question_type==$k}selected{/if}>{$v}</option>
+            {/volist}
+        </select>
     </div>
+    <div class="qf-item">
+        <label>难度</label>
+        <select name="difficulty" class="form-select">
+            <option value="">全部</option>
+            {volist name="difficultyMap" id="v" key="k"}
+            <option value="{$k}" {if $difficulty==$k}selected{/if}>{$v}</option>
+            {/volist}
+        </select>
+    </div>
+    <div class="qf-item qf-keyword">
+        <label>题目关键字</label>
+        <input type="text" name="keyword" value="{$keyword}" class="form-control" placeholder="搜索题目内容…">
+    </div>
+    <div class="qf-buttons">
+        <button class="btn btn-primary btn-sm"><i class="bi bi-search"></i> 搜索</button>
+        <a class="btn btn-outline-secondary btn-sm" href="/admin/Question/index"><i class="bi bi-arrow-counterclockwise"></i> 重置</a>
+    </div>
+</form>
+
+<!-- 试题列表 -->
+<div class="qs-card">
+    <div class="qs-table-header">
+        <div>ID</div>
+        <div>题目</div>
+        <div>题型</div>
+        <div>分类</div>
+        <div>难度</div>
+        <div>分值</div>
+        <div>答案</div>
+        <div style="text-align:right">操作</div>
+    </div>
+    {if $list->isEmpty()}
+    <div class="qs-empty">
+        <i class="bi bi-journal-text"></i>
+        <div class="qe-msg">还没有试题，点击上方"添加试题"或通过 Excel 批量导入</div>
+        <div class="d-flex gap-2 justify-content-center">
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/Question/import"><i class="bi bi-file-earmark-spreadsheet"></i> Excel 导入</a>
+            <a class="btn btn-primary btn-sm" href="/admin/Question/edit"><i class="bi bi-plus-lg"></i> 添加试题</a>
+        </div>
+    </div>
+    {else}
+    <div id="qsRows">
+        {volist name="list" id="item"}
+        <div class="qs-table-row" data-id="{$item.id}" data-title="{$item.title|htmlspecialchars=ENT_QUOTES,'UTF-8'}">
+            <div class="qs-col-id">#{$item.id}</div>
+            <div class="qs-col-title">{$item.title}</div>
+            <div>
+                <span class="qs-badge type-{$item.question_type}">{$typeMap[$item.question_type]}</span>
+            </div>
+            <div class="qs-col-cat">{$item.category|default='—'}</div>
+            <div>
+                <span class="qs-badge diff-{$item.difficulty}">{$difficultyMap[$item.difficulty]}</span>
+            </div>
+            <div class="qs-col-score">{$item.score}</div>
+            <div class="qs-col-ans">{$item.correct_answer|default='—'}</div>
+            <div class="qs-col-actions">
+                <button type="button" class="btn btn-outline-secondary btn-qs-preview" title="预览" data-id="{$item.id}"><i class="bi bi-eye"></i></button>
+                <a class="btn btn-outline-primary" href="/admin/Question/edit?id=<?php echo $item['id']; ?>" title="编辑"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn btn-outline-danger btn-qs-delete" title="删除" data-id="{$item.id}"><i class="bi bi-trash"></i></button>
+            </div>
+        </div>
+        {/volist}
+    </div>
+    <div class="qs-footer">
+        <div>共 <strong>{$list->total()}</strong> 条试题，第 {$list->currentPage()} / {$list->lastPage()} 页</div>
+        <div>{$list|raw}</div>
+    </div>
+    {/if}
 </div>
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0 align-middle">
-            <thead>
-                <tr>
-                    <th width="50">ID</th>
-                    <th>题目</th>
-                    <th width="100">题型</th>
-                    <th width="80">难度</th>
-                    <th width="60">答案</th>
-                    <th width="120">操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                {volist name="list" id="item"}
-                <tr>
-                    <td>{$item.id}</td>
-                    <td>{$item.title|mb_substr=0,60}</td>
-                    <td>{$typeMap[$item.question_type]}</td>
-                    <td>{$difficultyMap[$item.difficulty]}</td>
-                    <td><span class="badge bg-success">{$item.correct_answer}</span></td>
-                    <td>
-                        <a class="btn btn-sm btn-outline-primary" href="/admin/question/edit?id=<?php echo $item['id']; ?>"><i class="bi bi-pencil"></i></a>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="delItem({$item.id})"><i class="bi bi-trash"></i></button>
-                    </td>
-                </tr>
-                {/volist}
-                {if $list->isEmpty()}
-                <tr><td colspan="6" class="text-center text-muted py-4">暂无试题，请先导入或添加</td></tr>
-                {/if}
-            </tbody>
-        </table>
+<!-- 预览弹窗 -->
+<div class="qs-detail-mask" id="qsDetailMask">
+    <div class="qs-detail" role="dialog" aria-modal="true">
+        <div class="qs-detail-header">
+            <div class="qs-detail-title" id="qsDetailTitle">—</div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="qsDetailClose" aria-label="关闭"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="qs-detail-body" id="qsDetailBody">加载中…</div>
     </div>
-    <div class="card-footer bg-white">{$list|raw}</div>
 </div>
 {/block}
+
 {block name="js"}
 <script>
-async function delItem(id){
-    if(!await confirmAction('确认删除该试题？删除后不可恢复。', {danger:true, okText:'删除'})) return;
-    fetch('/admin/Question/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id})
-        .then(r=>r.json()).then(d=>{
-            showAlert(d.msg,d.code===1?'success':'danger');
-            if(d.code===1) setTimeout(function(){location.reload();},800);
+(function () {
+    // 删除
+    document.querySelectorAll('.btn-qs-delete').forEach(function (btn) {
+        btn.addEventListener('click', async function (e) {
+            e.stopPropagation();
+            var id = btn.dataset.id;
+            if (!await confirmAction('确认删除该试题？删除后不可恢复。', { danger: true, okText: '删除', title: '删除确认' })) return;
+            var fd = new URLSearchParams(); fd.append('id', id);
+            fetch('/admin/Question/delete', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: fd.toString() })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    showAlert(d.msg, d.code === 1 ? 'success' : 'danger');
+                    if (d.code === 1) setTimeout(function () { location.reload(); }, 600);
+                });
         });
-}
+    });
+
+    // 预览：点击行 / 预览按钮
+    var mask = document.getElementById('qsDetailMask');
+    var body = document.getElementById('qsDetailBody');
+    var titleEl = document.getElementById('qsDetailTitle');
+    var curId = null;
+
+    function openDetail(id) {
+        curId = id;
+        titleEl.textContent = '试题 #' + id;
+        body.innerHTML = '<div class="text-muted text-center py-4">加载中…</div>';
+        mask.classList.add('show');
+        document.body.style.overflow = 'hidden';
+
+        fetch('/admin/Question/edit?id=' + id).then(function (r) { return r.text(); }).then(function (html) {
+            // 提取表单字段
+            var m;
+            function pick(field, attr) {
+                var re = new RegExp('name="' + field + '"[^>]*>([\\s\\S]*?)</textarea>', 'i');
+                if ((m = html.match(re))) return m[1].trim();
+                re = new RegExp('name="' + field + '"[^>]*value="([^"]*)"', 'i');
+                if ((m = html.match(re))) return m[1];
+                return '';
+            }
+            var title = pick('title');
+            var optA = pick('option_a');
+            var optB = pick('option_b');
+            var optC = pick('option_c');
+            var optD = pick('option_d');
+            var answer = pick('correct_answer');
+            var score = pick('score');
+            var diff = pick('difficulty');
+            var cat = pick('category');
+            var qType = pick('question_type');
+            if (!qType) {
+                m = html.match(/name="question_type"[^>]*selected[^>]*value="(\d+)"/i);
+                if (m) qType = m[1];
+            }
+
+            var typeNames = {1: '单选题', 2: '多选题', 3: '判断题', 4: '填空题', 5: '简答题'};
+            var diffNames = {1: '简单', 2: '中等', 3: '困难'};
+            var opts = [];
+            ['A', 'B', 'C', 'D'].forEach(function (letter, i) {
+                var v = [optA, optB, optC, optD][i];
+                if (v && String(v).trim()) opts.push({ letter: letter, text: String(v).trim() });
+            });
+
+            var ansBlock = '';
+            if (answer) ansBlock = '<div class="qs-ans-block"><strong>参考答案：</strong>' + String(answer).toUpperCase() + '</div>';
+            else ansBlock = '<div class="text-muted">（暂无参考答案）</div>';
+
+            body.innerHTML = ''
+                + '<dl class="qs-detail-row"><dt>题型</dt><dd>' + (typeNames[qType] || '—') + '</dd></dl>'
+                + '<dl class="qs-detail-row"><dt>难度</dt><dd>' + (diffNames[diff] || '—') + '</dd></dl>'
+                + '<dl class="qs-detail-row"><dt>分值</dt><dd>' + (score || '—') + '</dd></dl>'
+                + '<dl class="qs-detail-row"><dt>分类</dt><dd>' + (cat || '—') + '</dd></dl>'
+                + '<div style="margin-top:14px">'
+                + '<label style="font-size:11px;color:var(--jb-text-faint);text-transform:uppercase;letter-spacing:.5px">题目内容</label>'
+                + '<div style="margin-top:6px;padding:12px 14px;background:var(--jb-panel);border:1px solid var(--jb-border);border-radius:8px;color:#fff;line-height:1.7;font-size:14px">' + (title || '—') + '</div>'
+                + '</div>'
+                + (opts.length ? '<div style="margin-top:14px">'
+                    + '<label style="font-size:11px;color:var(--jb-text-faint);text-transform:uppercase;letter-spacing:.5px">选项</label>'
+                    + '<div style="margin-top:8px">' + opts.map(function (o) { return '<div class="qs-option"><span class="qol-letter">' + o.letter + '.</span><span class="qol-text">' + o.text + '</span></div>'; }).join('') + '</div>'
+                    + '</div>' : '')
+                + '<div style="margin-top:14px">'
+                + '<label style="font-size:11px;color:var(--jb-text-faint);text-transform:uppercase;letter-spacing:.5px">答案</label>'
+                + ansBlock
+                + '</div>';
+        }).catch(function () {
+            body.innerHTML = '<div class="text-danger text-center py-4">加载失败，请稍后重试</div>';
+        });
+    }
+
+    function closeDetail() {
+        mask.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+    document.getElementById('qsDetailClose').addEventListener('click', closeDetail);
+    mask.addEventListener('click', function (e) { if (e.target === mask) closeDetail(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && mask.classList.contains('show')) closeDetail(); });
+
+    document.querySelectorAll('.btn-qs-preview').forEach(function (btn) {
+        btn.addEventListener('click', function (e) { e.stopPropagation(); openDetail(btn.dataset.id); });
+    });
+    document.querySelectorAll('.qs-table-row').forEach(function (row) {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('.btn')) return;
+            openDetail(row.dataset.id);
+        });
+    });
+})();
 </script>
 {/block}
