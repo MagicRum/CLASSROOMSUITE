@@ -1,163 +1,131 @@
-# class="doc"
-# 学生课堂管理系统 - 宝塔部署手册
+# QTS 抽题系统 技术文档
+---
 
-## 一、环境要求
+## 1. 项目概览
 
-| 组件 | 版本要求 |
-|------|----------|
-| PHP | >= 8.0 |
-| MySQL | >= 5.7（推荐 8.0）|
-| Nginx | 宝塔默认版本即可 |
+**QTS（Question & Test System）** 是一个面向高校课堂的抽题考试管理系统，核心能力：
 
-## 二、宝塔面板准备
+- **题库管理**：5 种题型（单选、多选、判断、填空、简答），Excel 批量导入（三步向导：上传 → 预览编辑 → 确认）
+- **随机抽题**：按难度/分类/题型多维度筛选，一键随机组卷
+- **在线考试**：学生端答题、提交、自动评分（客观题即时，简答题教师批改）
+- **在线判题（OJ）**：编程题在线评测，C/C++/Python/Java/GCC 沙箱编译运行
+- **随机分组**：按班级一键生成实践课分组名单
+- **多门户**：管理员 / 教师 / 学生三端分离
 
-1. **安全组开放端口**（腾讯云控制台 → 云服务器 → 安全组）：
-   - 入站规则：TCP 80（HTTP）、443（HTTPS），源 IP 0.0.0.0/0
-   - **不要**开放 3306（MySQL）到公网，只留本地访问
+---
 
-2. **宝塔一键安装 LNMP**：
-   - 软件商店 → 搜「LNMP」→ 选 PHP 8.0 + MySQL 8.0 + Nginx → 一键安装
+## 2. 技术栈
 
-## 三、创建站点
+| 层 | 技术 | 备注 |
+|---|---|---|
+| 后端框架 | ThinkPHP 6.1 | PHP 7.4~8.2 |
+| ORM | ThinkORM 2.x | |
+| 数据库 | SQLite 3 | 文件型 DB，零安装；腾讯云 `runtime/classroom.sqlite` |
+| Excel | PhpSpreadsheet 2.x | 批量导入/导出 |
+| 判题沙箱 | C++ 编译器 + Python subprocess | php-fpm 下需 `putenv` 设置 PATH |
+| 前端 | Bootstrap 5.3 + 原生 JS | JetBrains 暗色主题 + 亮色切换 |
+| 模板引擎 | ThinkPHP Blade 风格 | `{$var}`、`{volist}`、`{if}` |
+| Web 服务器 | Nginx + PHP-FPM | 宝塔面板管理 |
+| 版本控制 | Git + 裸仓库 post-receive 钩子 | |
 
-1. 宝塔面板 → **网站** → **添加站点**
-   - 域名：填你的域名或服务器公网 IP
-   - 根目录：默认（一般是 `/www/wwwroot/你的域名/`）
-   - PHP 版本：选 **PHP 8.0**
-   - 数据库：勾选 MySQL，自动创建，记下数据库名、用户名、密码
+---
 
-2. 开启必要 PHP 扩展：
-   - 网站 → 设置 → PHP设置 → 安装扩展 → 勾选 `fileinfo`、`openssl`、`pdo_mysql`
-   - PHP设置 → 禁用函数 → **删除** `putenv`（ThinkPHP 部分版本需要）
-
-## 四、上传项目代码
-
-**方式 A：Git clone（推荐）**
-```bash
-cd /www/wwwroot/你的域名/
-git clone https://你的仓库地址.git .
-```
-
-**方式 B：宝塔文件管理器**
-- 本地将 `classroom-system` 目录打包为 zip
-- 宝塔文件管理器上传到站点根目录
-- 右键解压
-
-## 五、Composer 安装依赖
-
-宝塔面板 → **软件商店** → 搜「Composer」→ 安装
-
-然后打开宝塔的**终端**，执行：
-```bash
-cd /www/wwwroot/你的域名/
-composer install --no-dev --optimize-autoloader
-```
-
-如果下载慢，可以用国内镜像：
-```bash
-composer config -g repo.packagist composer https://mirrors.aliyun.com/composer/
-composer install --no-dev --optimize-autoloader
-```
-
-## 六、配置数据库
-
-### 方式 1：用 .env 文件（推荐）
-```bash
-cp .env.example .env
-vi .env
-```
-把里面的 `database.password` 改成宝塔创建数据库时生成的密码。
-
-### 方式 2：手动导入 SQL（不管 .env 也行，默认读 config/database.php）
-- 宝塔 → 数据库 → 点「管理」进 phpMyAdmin
-- 选中你的数据库 → 导入 → 上传 `database/schema.sql` → 执行
-
-## 七、配置伪静态
-
-宝塔 → 网站 → 设置 → **伪静态** → 粘贴 deploy/nginx.conf 的内容 → 保存
-
-## 八、目录权限
-
-宝塔 → 文件管理器 → 选中 `runtime` 目录 → 权限 → **755**（或 777）
-
-```bash
-chmod -R 755 runtime/
-chown -R www:www runtime/
-```
-
-## 九、默认账号
-
-| 角色 | 登录地址 | 账号 | 密码 |
-|------|----------|------|------|
-| 管理员（老师） | `http://你的域名/admin/login` | admin | admin123 |
-| 学生 | `http://你的域名/student/login` | 学号+姓名（无需密码） | - |
-
-> **⚠️ 登录后立即修改管理员密码！** 在 phpMyAdmin 中更新 `cs_admins` 表的 `password` 字段，新密码用 PHP `password_hash('新密码', PASSWORD_DEFAULT)` 生成。
-
-## 十、快速验证清单
-
-- [ ] 首页能访问 → 选「我是老师」→ 管理员登录成功
-- [ ] 后台「仪表盘」能看到统计数字
-- [ ] 学生管理 → 下载模板 → 填几个测试数据 → 导入成功
-- [ ] 试题管理 → 下载模板 → 填几道题 → 导入成功
-- [ ] 分组管理 → 选班级 → 随机分组成功
-- [ ] 学生端 → 用测试学生的学号+姓名登录 → 点击抽题 → 看到2道随机题 → 作答提交 → 看到得分
-- [ ] 后台考试记录 → 能看到刚才学生的抽题记录和答案
-
-## 十一、HTTPS（推荐）
-
-宝塔 → 网站 → 设置 → **SSL** → Let's Encrypt → 勾选域名 → 申请
-申请成功后开启「强制 HTTPS」
-
-## 十二、安全加固
-
-1. **修改宝塔端口**：安全 → 面板设置 → 修改默认端口
-2. **MySQL 远程访问关闭**：数据库 → 权限 → 只允许 127.0.0.1
-3. **定期备份**：计划任务 → 添加「备份网站」和「备份数据库」，每天凌晨执行
-4. **上传文件白名单**：代码里只允许 `.xlsx/.xls/.csv`
-5. **隐藏 index.php**：伪静态已配置，访问 `/admin/login` 不带 index.php
-
-## 十三、常见问题
-
-| 问题 | 解决方案 |
-|------|----------|
-| 页面白屏 | 宝塔 → PHP设置 → 打开「调试模式」，看错误日志（runtime/log/）|
-| 数据库连接失败 | 检查 .env 文件里的密码，MySQL 是否启动 |
-| Composer 下载慢 | 换阿里云镜像（见第五节）|
-| Excel 导入失败 | 确认 vendor 里有 phpoffice/phpspreadsheet（重新跑 composer install）|
-| 伪静态不生效 | 确认 deploy/nginx.conf 里的规则粘贴进去了；宝塔 PHP 设置里「URL重写」已开启 |
-| runtime 写入权限 | chmod -R 777 runtime/ 试试（生产用 755 即可）|
-
-## 十四、目录结构
+## 3. 目录结构
 
 ```
 classroom-system/
-├── app/                     # 业务代码
+├── app/
 │   ├── controller/
-│   │   ├── admin/           # 管理员端控制器
-│   │   └── student/         # 学生端控制器
-│   ├── model/               # 数据模型
-│   ├── middleware/          # 认证中间件
-│   └── view/                # 前端模板
-├── config/                  # ThinkPHP 配置
-├── database/
-│   └── schema.sql           # 建表 SQL
-├── deploy/
-│   └── nginx.conf           # Nginx 伪静态示例
-├── public/                  # Web 入口（宝塔站点根目录指向这里）
-│   └── index.php
-├── route/
-│   └── app.php              # 路由定义
-├── runtime/                 # 运行时缓存（需可写）
-├── .env.example             # 环境变量示例
-├── composer.json
-└── README.md
+│   │   ├── admin/          # 管理员后台控制器（Question/Draw/Exam/Oj* 等）
+│   │   ├── student/        # 学生端控制器
+│   │   └── common.php      # 公共函数
+│   ├── middleware/         # 中间件（AdminAuth 鉴权等）
+│   ├── model/              # ThinkORM 模型
+│   ├── view/
+│   │   ├── admin/
+│   │   │   ├── layout/    # 后台布局（侧边栏 + 主题切换按钮）
+│   │   │   └── question/   # 题库管理页（index / edit / import）
+│   │   └── student/
+│   └── service/            # 业务服务（可选）
+├── config/                 # 框架配置（app.php / database.php / route.php）
+├── route/route.php         # 路由定义
+├── public/
+│   ├── static/css/theme.css   # 主题变量 + 亮色覆盖（约 620 行）
+│   ├── static/js/theme.js      # 主题切换逻辑
+│   └── index.php               # 入口文件
+├── runtime/
+│   ├── classroom.sqlite   # SQLite 数据库文件（敏感！含用户密码哈希）
+│   ├── temp/              # 模板编译缓存（改模板后需清空）
+│   └── log/               # 运行日志（按日）
+├── vendor/                 # Composer 依赖
+└── composer.json
 ```
 
-## 十五、更新维护
+---
 
-```bash
-cd /www/wwwroot/你的域名/
-git pull
-composer install --no-dev --optimize-autoloader
+## 4. 数据库结构
+
+数据库文件：`runtime/classroom.sqlite`  
+连接在 `config/database.php` 中配置，使用 `sqlite` 驱动。
+
+### 核心表
+
+| 表名 | 字段 | 说明 |
+|---|---|---|
+| `cs_admins` | id / username / password(phpass) / real_name / last_login_* | 管理员 |
+| `cs_questions` | id / title / question_type(1-5) / option_a-d / correct_answer / score / difficulty(1-3) / category | 题库 |
+| `cs_exam_records` | id / student_id / question_ids(逗号) / student_answers(JSON) / score / status / draw_time / submit_time | 考试记录 |
+| `cs_clazz` | id / name | 班级 |
+| `cs_students` | id / student_no / name / password / clazz_id | 学生 |
+| `cs_groups` / `cs_group_members` | 分组 + 成员 | 实践课分组 |
+| `cs_oj_problems` / `cs_oj_submissions` / `cs_oj_test_cases` / `cs_oj_categories` | 判题系统四表 | |
+
+
+---
+
+## 6. 核心模块实现
+
+### 6.1 题库管理
+
+**文件**：`app/controller/admin/Question.php` + `app/view/admin/question/index.html` / `import.html`
+
+**路由**（`route/route.php`）：
 ```
+GET  /admin/Question/index          列表
+GET  /admin/Question/edit?id=N      新增/编辑页
+POST /admin/Question/save           保存
+POST /admin/Question/delete         删除
+GET  /admin/Question/template       下载 Excel 模板
+GET  /admin/Question/import         三步向导入口
+POST /admin/Question/importPreview  解析 Excel 返回 JSON
+POST /admin/Question/confirmImport  确认入库
+```
+
+**Excel 导入三步向导**：
+
+1. **Step 1 上传**：拖拽 + 点击双模式，PhpSpreadsheet 解析后 POST 到 `importPreview`
+2. **Step 2 预览编辑**：返回逐行 JSON（含 `errors[]`、`exists` 查重、`skip` 标记），前端可内联编辑每题
+3. **Step 3 确认**：POST 整页 `rows[]` 到 `confirmImport`，服务端做防御性答案校验（单选必须 A-D、多选 A-D+、判断 A/B）后 upsert 入库
+
+**列表页 UI**：
+- CSS Grid 6 列（序号 / 题目 / 题型 / 分类 / 难度 / 操作）—— 答案默认收起、ID 列删除
+- 序号 JS 计算 `seqBase + rowIndex + 1`，分页内从 1 连续
+- 题型/难度彩色徽标
+- 点击行或预览按钮弹预览弹窗
+
+**预览弹窗按题型分样式**（`openDetail()` JS）：
+- **单选/多选**：选项卡片 + 正确答案绿色高亮 `.is-answer`
+- **判断**：A/B 正确/错误双卡片
+- **填空**：下划线占位 `.qs-fill-block`
+- **简答**：粉色答题区 + 教师参考答案 `.qs-essay-block`
+
+### 6.2 主题系统
+
+- **暗色（默认）**：JetBrains 深灰 `#101013` + 紫罗兰强调 `#A855F7`
+- **亮色**：`html[data-theme="light"]` 触发，白底 `#F5F5F7`，深紫 `#7C3AED` 强调
+- **主题变量**：`theme.css` 先在 `:root` 定义基础色，再用 `html[data-theme="light"]` 整体覆盖
+- **切换按钮**：右下角浮动圆按钮，`localStorage.setItem('cs-theme', 'light')` 持久化
+- **缓存注意**：nginx 对 `.css` 有 `expires 12h`，改 `theme.css` 后需要在 `admin/layout/index.html` 的 `<link>` 加版本号 `?v=N` 绕过
+
+
+*文档完。系统状态：GitHub 已同步 HEAD `9b93370`，腾讯云服务器运行中，内网 rsync 定时同步。*
