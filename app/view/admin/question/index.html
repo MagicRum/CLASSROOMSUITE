@@ -376,34 +376,49 @@
         });
     }
 
-    function openDetail(id) {
-        titleEl.textContent = '试题详情';
+    function openDetail(id, row) {
+        // 从列表行的 dataset 拿 qtype，比解析编辑页 HTML 可靠 100 倍
+        var qTypeRaw = row && row.dataset.qtype ? row.dataset.qtype : '';
+        titleEl.textContent = '加载中…';
         body.innerHTML = '<div class="text-muted text-center py-4">加载中…</div>';
         mask.classList.add('show');
         document.body.style.overflow = 'hidden';
 
         fetch('/admin/Question/edit?id=' + id).then(function (r) { return r.text(); }).then(function (html) {
             // 从编辑页 HTML 里提取字段
-            function pick(name) {
-                var re1 = new RegExp('name="' + name + '"[^>]*>([\\s\\S]*?)</textarea>', 'i');
-                var m; if ((m = html.match(re1))) return m[1].trim();
-                var re2 = new RegExp('name="' + name + '"[^>]*value="([^"]*)"', 'i');
-                if ((m = html.match(re2))) return m[1];
+            function pickInput(name) {
+                // input[type=text] 的 value
+                var re = new RegExp('name="' + name + '"[^>]*type="text"[^>]*value="([^"]*)"', 'i');
+                var m; if ((m = html.match(re))) return m[1];
+                // 不带 type 默认就是 text
+                re = new RegExp('name="' + name + '"(?![^>]*type=)[^>]*value="([^"]*)"', 'i');
+                if ((m = html.match(re))) return m[1];
                 return '';
             }
-            var title = pick('title');
-            var optA = pick('option_a');
-            var optB = pick('option_b');
-            var optC = pick('option_c');
-            var optD = pick('option_d');
-            var answer = pick('correct_answer');
-            var score = pick('score');
-            var cat = pick('category');
-            var qType = pick('question_type');
+            function pickTextarea(name) {
+                var re = new RegExp('name="' + name + '"[^>]*>([\\s\\S]*?)</textarea>', 'i');
+                var m; if ((m = html.match(re))) return m[1].trim();
+                return '';
+            }
+            // 先找 title（可能是 input 也可能是 textarea）
+            var title = pickTextarea('title') || pickInput('title');
+            var answer = pickTextarea('correct_answer') || pickInput('correct_answer');
+            var score = pickInput('score') || pickTextarea('score');
+            var cat = pickInput('category') || pickTextarea('category');
+
+            // 选项（只从 textarea 类型取，避开表单 HTML 片段混入）
+            var optA = pickTextarea('option_a'); if (!optA) optA = pickInput('option_a');
+            var optB = pickTextarea('option_b'); if (!optB) optB = pickInput('option_b');
+            var optC = pickTextarea('option_c'); if (!optC) optC = pickInput('option_c');
+            var optD = pickTextarea('option_d'); if (!optD) optD = pickInput('option_d');
+
+            // 题型：优先用列表行 dataset，实在没有才从 select 解析
+            var qType = qTypeRaw;
             if (!qType) { var m = html.match(/name="question_type"[^>]*selected[^>]*value="(\d+)"/i); if (m) qType = m[1]; }
-            var diff = pick('difficulty');
+            var diff = pickInput('difficulty');
             if (!diff) { var m = html.match(/name="difficulty"[^>]*selected[^>]*value="(\d+)"/i); if (m) diff = m[1]; }
 
+            qType = parseInt(qType, 10) || 5; // 默认 fallback 到简答
             var typeNames = {1: '单选题', 2: '多选题', 3: '判断题', 4: '填空题', 5: '简答题'};
             var diffNames = {1: '简单', 2: '中等', 3: '困难'};
             titleEl.textContent = typeNames[qType] + ' · ' + (cat || '未分类');
@@ -482,12 +497,16 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && mask.classList.contains('show')) closeDetail(); });
 
     document.querySelectorAll('.btn-qs-preview').forEach(function (btn) {
-        btn.addEventListener('click', function (e) { e.stopPropagation(); openDetail(btn.closest('.qs-table-row').dataset.id); });
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var row = btn.closest('.qs-table-row');
+            openDetail(row.dataset.id, row);
+        });
     });
     document.querySelectorAll('#qsRows .qs-table-row').forEach(function (row) {
         row.addEventListener('click', function (e) {
             if (e.target.closest('.btn')) return;
-            openDetail(row.dataset.id);
+            openDetail(row.dataset.id, row);
         });
     });
 })();
