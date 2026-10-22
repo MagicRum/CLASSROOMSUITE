@@ -261,15 +261,12 @@ class Question extends Base
 
         foreach ($rows as $r) {
             // 前端可传 skip=1 让某行被跳过
-            if (!empty($r['skip'])) continue;
+            if (!empty($r['skip'])) { $fail++; continue; }
 
             $title = isset($r['title']) ? trim((string) $r['title']) : '';
-            if ($title === '') {
-                $fail++;
-                continue;
-            }
+            if ($title === '') { $fail++; continue; }
             $qType = isset($r['question_type']) ? intval($r['question_type']) : 1;
-            if (!in_array($qType, [1, 2, 3, 4, 5], true)) $qType = 1;
+            if (!in_array($qType, [1, 2, 3, 4, 5], true)) { $qType = 1; }
 
             $answerRaw = isset($r['correct_answer']) ? trim((string) $r['correct_answer']) : '';
             $answer = $qType == 5 ? $answerRaw : strtoupper($answerRaw);
@@ -277,6 +274,14 @@ class Question extends Base
             if ($score <= 0) $score = 5;
             $diff = isset($r['difficulty']) ? intval($r['difficulty']) : 2;
             if (!in_array($diff, [1, 2, 3], true)) $diff = 2;
+
+            // 服务端防御性校验（前端可能被绕过）
+            $invalid = false;
+            if ($qType != 5 && $answer === '') { $invalid = true; }
+            if ($qType == 1 && $answer !== '' && !preg_match('/^[A-D]$/', $answer)) { $invalid = true; }
+            if ($qType == 2 && $answer !== '' && !preg_match('/^[A-D]+$/', $answer)) { $invalid = true; }
+            if ($qType == 3 && $answer !== '' && !in_array($answer, ['A', 'B'], true)) { $invalid = true; }
+            if ($invalid) { $fail++; continue; }
 
             $payload = [
                 'title'           => $title,
