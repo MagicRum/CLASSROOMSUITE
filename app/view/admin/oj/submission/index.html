@@ -1,10 +1,97 @@
 {extend name="admin/layout/index" /}
 {block name="title"}提交记录{/block}
+{block name="head"}
+<style>
+.sub-card {
+    background: var(--jb-panel); border: 1px solid var(--jb-border);
+    border-radius: 12px; overflow: hidden;
+}
+.sub-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 18px; background: var(--jb-panel-2);
+    border-bottom: 1px solid var(--jb-border);
+    font-size: 11.5px; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--jb-text-faint); font-weight: 600;
+}
+.sub-student { border-bottom: 1px solid var(--jb-border); }
+.sub-student:last-child { border-bottom: 0; }
+.sub-row {
+    display: grid;
+    grid-template-columns: 22px minmax(150px, 1.1fr) 1fr 1.5fr 140px 76px;
+    gap: 14px; align-items: center; width: 100%;
+    padding: 14px 18px; border: 0; background: transparent;
+    text-align: left; color: var(--jb-text); cursor: pointer;
+    font-family: inherit;
+    transition: background .15s ease;
+}
+.sub-row:hover { background: rgba(124, 58, 237, .06); }
+.sub-caret {
+    display: inline-flex; color: var(--jb-text-faint);
+    transition: transform .18s ease, color .18s ease;
+}
+.sub-student.open .sub-caret { transform: rotate(90deg); color: var(--jb-blue); }
+.sub-person { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sub-name { font-size: 14.5px; font-weight: 600; color: var(--jb-text); }
+.sub-no {
+    font-family: "Space Grotesk", monospace; font-size: 11.5px;
+    color: var(--jb-text-faint); letter-spacing: .3px;
+}
+.sub-class { font-size: 12.5px; color: var(--jb-text-dim); }
+.sub-metrics { display: flex; gap: 8px; flex-wrap: wrap; }
+.sub-metric {
+    font-size: 11.5px; color: var(--jb-text-dim);
+    background: var(--jb-panel-2); border: 1px solid var(--jb-border);
+    border-radius: 999px; padding: 3px 10px;
+}
+.sub-metric b {
+    font-family: "Space Grotesk", monospace; font-weight: 600;
+    color: var(--jb-text); margin-left: 3px;
+}
+.sub-metric.ok {
+    color: var(--jb-blue); background: rgba(124, 58, 237, .08);
+    border-color: rgba(124, 58, 237, .30);
+}
+.sub-metric.ok b { color: var(--jb-blue-hi); }
+.sub-time {
+    font-family: "Space Grotesk", monospace; font-size: 11.5px;
+    color: var(--jb-text-faint);
+}
+.sub-action {
+    display: inline-flex; align-items: center; justify-content: flex-end;
+    gap: 4px; font-size: 11.5px; color: var(--jb-text-faint);
+}
+.sub-student.open .sub-action { color: var(--jb-blue); }
+.sub-detail { display: none; padding: 2px 18px 18px 54px; background: rgba(124, 58, 237, .03); }
+.sub-student.open .sub-detail { display: block; }
+.sub-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.sub-table th {
+    padding: 8px 10px; text-align: left;
+    font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--jb-text-faint); font-weight: 600;
+    border-bottom: 1px solid var(--jb-border);
+}
+.sub-table td {
+    padding: 10px; border-bottom: 1px solid var(--jb-border);
+    color: var(--jb-text-dim); vertical-align: middle;
+}
+.sub-table tr:last-child td { border-bottom: 0; }
+.sub-table .sub-id { font-family: "Space Grotesk", monospace; color: var(--jb-text-faint); }
+.sub-table a { color: var(--jb-text); text-decoration: none; }
+.sub-table a:hover { color: var(--jb-blue-hi); }
+.sub-empty { padding: 16px 4px; font-size: 12.5px; color: var(--jb-text-faint); }
+@media (max-width: 992px) {
+    .sub-row { grid-template-columns: 22px 1.2fr 1fr 76px; }
+    .sub-class, .sub-time { display: none; }
+    .sub-detail { padding-left: 18px; overflow-x: auto; }
+    .sub-table { min-width: 620px; }
+}
+</style>
+{/block}
 {block name="content"}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h4 class="mb-1">提交记录</h4>
-        <div class="text-muted small">查询全部学生提交，可进入详情查看源码与逐用例结果</div>
+        <div class="text-muted small">按学生汇总提交记录，展开后可按学生逐条查看，进入详情可看源码与逐用例结果</div>
     </div>
     <div class="d-flex gap-2">
         <a href="/admin/oj/stats" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bar-chart"></i> 统计分析</a>
@@ -71,63 +158,97 @@
     </div>
 </div>
 
-<div class="card">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead>
-                <tr>
-                    <th width="70">ID</th>
-                    <th width="150">学生</th>
-                    <th style="min-width:180px;">题目</th>
-                    <th width="110">语言</th>
-                    <th width="110">状态</th>
-                    <th width="80">得分</th>
-                    <th width="130">耗时 / 内存</th>
-                    <th width="160">提交时间</th>
-                    <th width="80">操作</th>
-                </tr>
-            </thead>
-            <tbody>
-                {volist name="list" id="item"}
-                <tr>
-                    <td>{$item.id}</td>
-                    <td>
-                        <div>{$item.student_name}</div>
-                        <div class="text-muted small">{$item.student_no}</div>
-                    </td>
-                    <td>
-                        <a href="/admin/oj/problem/edit?id={$item.problem_id}" class="text-decoration-none">
-                            {if isset($problemMap[$item['problem_id']])}{$problemMap[$item['problem_id']]}{else /}题目 #{$item.problem_id}{/if}
-                        </a>
-                    </td>
-                    <td class="text-muted small">{if isset($languageMap[$item['language']])}{$languageMap[$item['language']]['name']}{else /}{$item.language}{/if}</td>
-                    <td>
-                        {if $item.status == 'ac'}<span class="badge bg-success">{$statusMap[$item['status']]}</span>
-                        {elseif $item.status == 'pending' || $item.status == 'judging' /}<span class="badge bg-info text-dark">{$statusMap[$item['status']]}</span>
-                        {elseif $item.status == 'ce' /}<span class="badge bg-warning text-dark">{$statusMap[$item['status']]}</span>
-                        {else /}<span class="badge bg-danger">{$statusMap[$item['status']]}</span>{/if}
-                    </td>
-                    <td>{$item.score}</td>
-                    <td class="text-muted small">{$item.time_used} ms / {$item.memory_used} KB</td>
-                    <td class="text-muted small">{$item.create_time}</td>
-                    <td>
-                        <a href="/admin/oj/submission/detail?id={$item.id}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
-                    </td>
-                </tr>
-                {/volist}
-                {if $list->isEmpty()}
-                <tr><td colspan="9" class="text-center text-muted py-4">暂无提交记录</td></tr>
-                {/if}
-            </tbody>
-        </table>
+<div class="sub-card">
+    <div class="sub-bar">
+        <span>按学生汇总 · 点击展开查看该学生全部提交</span>
+        <span>{if $list->total() > 0}共 {$list->total()} 位学生{/if}</span>
+    </div>
+
+    {volist name="list" id="stu"}
+    <div class="sub-student">
+        <button type="button" class="sub-row" onclick="toggleStudent(this)">
+            <span class="sub-caret"><i class="bi bi-chevron-right"></i></span>
+            <span class="sub-person">
+                <span class="sub-name">{$stu.student_name}</span>
+                <span class="sub-no">{$stu.student_no}</span>
+            </span>
+            <span class="sub-class">
+                {if isset($classMap[$stu['class_id']])}{$classMap[$stu['class_id']]}{else /}—{/if}
+            </span>
+            <span class="sub-metrics">
+                <span class="sub-metric">提交<b>{$stu.total}</b></span>
+                <span class="sub-metric ok">通过<b>{$stu.solved}</b>题</span>
+                <span class="sub-metric">AC<b>{$stu.ac_count}</b>次</span>
+            </span>
+            <span class="sub-time">{$stu.last_time}</span>
+            <span class="sub-action">展开 <i class="bi bi-chevron-down"></i></span>
+        </button>
+
+        <div class="sub-detail">
+            <?php $stuRows = isset($grouped[(int) $stu['student_id']]) ? $grouped[(int) $stu['student_id']] : []; ?>
+            <?php if (empty($stuRows)) : ?>
+            <div class="sub-empty">该筛选条件下暂无提交明细</div>
+            <?php else : ?>
+            <table class="sub-table">
+                <thead>
+                    <tr>
+                        <th width="76">ID</th>
+                        <th>题目</th>
+                        <th width="110">语言</th>
+                        <th width="100">状态</th>
+                        <th width="70">得分</th>
+                        <th width="150">耗时 / 内存</th>
+                        <th width="160">提交时间</th>
+                        <th width="70">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($stuRows as $item) : ?>
+                    <tr>
+                        <td class="sub-id">#<?php echo $item['id']; ?></td>
+                        <td>
+                            <a href="/admin/oj/problem/edit?id=<?php echo $item['problem_id']; ?>">
+                                <?php echo isset($problemMap[intval($item['problem_id'])]) ? $problemMap[intval($item['problem_id'])] : ('题目 #' . $item['problem_id']); ?>
+                            </a>
+                        </td>
+                        <td>{if isset($languageMap[$item['language']])}{$languageMap[$item['language']]['name']}{else /}{$item.language}{/if}</td>
+                        <td>
+                            {if $item.status == 'ac'}<span class="badge bg-success">{$statusMap[$item['status']]}</span>
+                            {elseif $item.status == 'pending' || $item.status == 'judging' /}<span class="badge bg-info text-dark">{$statusMap[$item['status']]}</span>
+                            {elseif $item.status == 'ce' /}<span class="badge bg-warning text-dark">{$statusMap[$item['status']]}</span>
+                            {else /}<span class="badge bg-danger">{$statusMap[$item['status']]}</span>{/if}
+                        </td>
+                        <td>{$item.score}</td>
+                        <td class="sub-id">{$item.time_used} ms / {$item.memory_used} KB</td>
+                        <td class="sub-id">{$item.create_time}</td>
+                        <td>
+                            <a href="/admin/oj/submission/detail?id={$item.id}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
         </div>
     </div>
-    {if $list->total() > 0}
-    <div class="card-footer d-flex justify-content-between align-items-center">
-        <span class="text-muted small">共 {$list->total()} 条记录</span>
-        {$list->render()|raw}
-    </div>
+    {/volist}
+
+    {if $list->isEmpty()}
+    <div class="sub-empty" style="padding: 48px 20px; text-align: center;">该筛选条件下暂无提交记录</div>
     {/if}
 </div>
+
+{if $list->total() > 0}
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <span class="text-muted small">共 {$list->total()} 位学生</span>
+    {$list->render()|raw}
+</div>
+{/if}
+
+<script>
+function toggleStudent(btn) {
+    var box = btn.closest('.sub-student');
+    if (box) box.classList.toggle('open');
+}
+</script>
 {/block}

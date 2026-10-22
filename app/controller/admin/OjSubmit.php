@@ -23,36 +23,34 @@ class OjSubmit extends Base
         $start = trim(input('start', ''));
         $end = trim(input('end', ''));
 
-        $query = Db::name('oj_submissions')->where('is_test', 0);
-        if ($classId) {
-            $query->where('class_id', $classId);
-        }
-        if ($problemId) {
-            $query->where('problem_id', $problemId);
-        }
-        if ($language !== '') {
-            $query->where('language', $language);
-        }
-        if ($status !== '') {
-            $query->where('status', $status);
-        }
-        if ($keyword !== '') {
-            $query->where(function ($q) use ($keyword) {
-                $q->where('student_no', 'like', '%' . $keyword . '%')
-                  ->whereOr('student_name', 'like', '%' . $keyword . '%');
-            });
-        }
-        if ($start !== '') {
-            $query->where('create_time', '>=', $start . ' 00:00:00');
-        }
-        if ($end !== '') {
-            $query->where('create_time', '<=', $end . ' 23:59:59');
+        $filters = compact('classId', 'problemId', 'language', 'status', 'keyword', 'start', 'end');
+
+        // 按学生分组分页：每个学生一条汇总，展开后查看其全部提交
+        $list = $this->filterQuery($filters)
+            ->field('student_id, student_no, student_name, class_id, COUNT(*) AS total, SUM(CASE WHEN status=\'ac\' THEN 1 ELSE 0 END) AS ac_count, COUNT(DISTINCT CASE WHEN status=\'ac\' THEN problem_id END) AS solved, MAX(create_time) AS last_time')
+            ->group('student_id, student_no, student_name, class_id')
+            ->order('last_time', 'desc')
+            ->paginate([
+                'list_rows' => 20,
+                'query'     => request()->param(),
+            ]);
+
+        $studentIds = [];
+        foreach ($list as $stu) {
+            $studentIds[] = intval($stu['student_id']);
         }
 
-        $list = $query->order('id', 'desc')->paginate([
-            'list_rows' => 30,
-            'query'     => request()->param(),
-        ]);
+        // 当前页学生在本页展开时需要的明细
+        $grouped = [];
+        if ($studentIds) {
+            $rows = $this->filterQuery($filters)
+                ->whereIn('student_id', $studentIds)
+                ->order('id', 'desc')
+                ->select();
+            foreach ($rows as $row) {
+                $grouped[intval($row['student_id'])][] = $row;
+            }
+        }
 
         $problemMap = [];
         foreach (Db::name('oj_problems')->field('id,title')->select() as $p) {
@@ -71,6 +69,7 @@ class OjSubmit extends Base
             'classMap'    => $classMap,
             'languageMap' => JudgeService::$languages,
             'statusMap'   => JudgeService::$statusMap,
+            'grouped'     => $grouped,
             'class_id'    => $classId,
             'problem_id'  => $problemId,
             'language'    => $language,
@@ -79,6 +78,40 @@ class OjSubmit extends Base
             'start'       => $start,
             'end'         => $end,
         ]);
+    }
+
+    /**
+     * 按当前筛选条件构造提交查询
+     */
+    private function filterQuery(array $f)
+    {
+        $query = Db::name('oj_submissions')->where('is_test', 0);
+        if ($f['classId']) {
+            $query->where('class_id', $f['classId']);
+        }
+        if ($f['problemId']) {
+            $query->where('problem_id', $f['problemId']);
+        }
+        if ($f['language'] !== '') {
+            $query->where('language', $f['language']);
+        }
+        if ($f['status'] !== '') {
+            $query->where('status', $f['status']);
+        }
+        if ($f['keyword'] !== '') {
+            $keyword = $f['keyword'];
+            $query->where(function ($q) use ($keyword) {
+                $q->where('student_no', 'like', '%' . $keyword . '%')
+                  ->whereOr('student_name', 'like', '%' . $keyword . '%');
+            });
+        }
+        if ($f['start'] !== '') {
+            $query->where('create_time', '>=', $f['start'] . ' 00:00:00');
+        }
+        if ($f['end'] !== '') {
+            $query->where('create_time', '<=', $f['end'] . ' 23:59:59');
+        }
+        return $query;
     }
 
     public function detail()
