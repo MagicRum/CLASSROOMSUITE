@@ -387,16 +387,14 @@
         fetch('/admin/Question/edit?id=' + id).then(function (r) { return r.text(); }).then(function (html) {
             // 从编辑页 HTML 里提取字段
             function pickInput(name) {
-                // input[type=text] 的 value
-                var re = new RegExp('name="' + name + '"[^>]*type="text"[^>]*value="([^"]*)"', 'i');
+                // 严格只匹配 <input ...> 单标签内的 value，不跨元素
+                var re = new RegExp('<input[^>]+name="' + name + '"[^>]+value="([^"]*)"', 'i');
                 var m; if ((m = html.match(re))) return m[1];
-                // 不带 type 默认就是 text
-                re = new RegExp('name="' + name + '"(?![^>]*type=)[^>]*value="([^"]*)"', 'i');
-                if ((m = html.match(re))) return m[1];
                 return '';
             }
             function pickTextarea(name) {
-                var re = new RegExp('name="' + name + '"[^>]*>([\\s\\S]*?)</textarea>', 'i');
+                // 严格只匹配 <textarea ...>VALUE</textarea>
+                var re = new RegExp('<textarea[^>]*name="' + name + '"[^>]*>([\\s\\S]*?)</textarea>', 'i');
                 var m; if ((m = html.match(re))) return m[1].trim();
                 return '';
             }
