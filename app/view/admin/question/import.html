@@ -1,63 +1,765 @@
-﻿{extend name="admin/layout/index" /}
-{block name="title"}导入试题库{/block}
-{block name="content"}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Excel 导入试题库</h4>
-    <a class="btn btn-outline-secondary" href="/admin/Question/index">返回列表</a>
-</div>
+{extend name="admin/layout/index" /}
+{block name="title"}试题库 Excel 导入{/block}
+{block name="head"}
+<style>
+.import-wizard .step-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 20px 32px;
+    background: var(--jb-panel);
+    border: 1px solid var(--jb-border); border-radius: 12px;
+    margin-bottom: 18px;
+}
+.import-wizard .step-bar .step {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--jb-text-dim); font-weight: 500;
+    transition: color .2s ease;
+}
+.import-wizard .step-bar .step .num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.06); color: var(--jb-text-dim);
+    font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 13px;
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.import-wizard .step-bar .step.active { color: #fff; }
+.import-wizard .step-bar .step.active .num { background: var(--jb-blue); color: #fff; }
+.import-wizard .step-bar .step.done .num { background: rgba(168,85,247,.2); color: var(--jb-blue-hi); }
+.import-wizard .step-bar .step.done { color: var(--jb-blue-hi); }
+.import-wizard .step-bar .connector {
+    flex: 1; height: 1px; background: var(--jb-border);
+    max-width: 60px;
+}
+.import-wizard .step-bar .connector.done { background: rgba(168,85,247,.5); }
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header"><strong>上传试题文件</strong></div>
-            <div class="card-body">
-                <form id="importForm" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label class="form-label">选择 Excel / CSV 文件</label>
-                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+.dropzone {
+    border: 1.5px dashed rgba(168,85,247,.5);
+    border-radius: 12px;
+    padding: 56px 24px;
+    text-align: center;
+    background: rgba(168,85,247,.04);
+    cursor: pointer;
+    transition: all .2s ease;
+    position: relative;
+}
+.dropzone:hover {
+    border-color: var(--jb-blue);
+    background: rgba(168,85,247,.08);
+}
+.dropzone.dragover {
+    border-color: var(--jb-blue);
+    background: rgba(168,85,247,.14);
+}
+.dropzone i {
+    font-size: 40px; color: var(--jb-blue-hi);
+    display: block; margin-bottom: 14px;
+}
+.dropzone .dz-title {
+    color: #fff; font-size: 16px; font-weight: 500; margin-bottom: 6px;
+}
+.dropzone .dz-sub {
+    color: var(--jb-text-dim); font-size: 13px;
+}
+.dropzone input[type="file"] { display: none; }
+
+.file-info {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px; background: var(--jb-panel-2);
+    border: 1px solid var(--jb-border); border-radius: 10px;
+    margin-top: 16px;
+}
+.file-info i { color: var(--jb-blue-hi); font-size: 20px; }
+.file-info .fi-main { flex: 1; min-width: 0; }
+.file-info .fi-name { color: #fff; font-size: 14px; font-weight: 500; word-break: break-all; }
+.file-info .fi-size { color: var(--jb-text-faint); font-size: 12px; margin-top: 2px; }
+.file-info .btn-clear {
+    color: var(--jb-text-dim); background: none; border: none; font-size: 18px; cursor: pointer;
+}
+.file-info .btn-clear:hover { color: #FF6B6B; }
+
+.template-card h6 {
+    color: #fff; font-size: 13px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 14px;
+}
+.template-card table th, .template-card table td {
+    font-size: 12.5px;
+    border-color: var(--jb-border) !important;
+}
+.template-card .col-letter {
+    width: 40px; text-align: center;
+    font-family: "Space Grotesk", monospace; font-weight: 600;
+    color: var(--jb-blue-hi);
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin-bottom: 16px;
+}
+.stat-tile {
+    padding: 14px 16px; background: var(--jb-panel);
+    border: 1px solid var(--jb-border); border-radius: 10px;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.stat-tile .st-label { font-size: 11.5px; color: var(--jb-text-faint); letter-spacing: .6px; text-transform: uppercase; }
+.stat-tile .st-value {
+    font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 22px; color: #fff;
+    line-height: 1.2;
+}
+.stat-tile.ok .st-value { color: #7FE89A; }
+.stat-tile.warn .st-value { color: #FFCE6B; }
+.stat-tile.err .st-value { color: #FF8FA8; }
+.stat-tile.info .st-value { color: var(--jb-blue-hi); }
+
+.preview-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px; margin-bottom: 14px;
+    background: var(--jb-panel-2); border: 1px solid var(--jb-border); border-radius: 10px;
+}
+.preview-bar .pb-filters { display: flex; gap: 8px; align-items: center; }
+.preview-bar .pb-tip { color: var(--jb-text-dim); font-size: 13px; }
+
+.preview-wrap {
+    border: 1px solid var(--jb-border); border-radius: 10px; overflow: hidden;
+    max-height: 560px; overflow-y: auto;
+}
+.preview-table th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--jb-panel-2);
+    font-size: 12px; text-transform: uppercase; letter-spacing: .6px;
+    padding: 10px 10px;
+}
+.preview-table td {
+    padding: 9px 10px; font-size: 13px; vertical-align: middle;
+}
+.preview-table tbody tr { transition: background .15s ease; }
+.preview-table tbody tr.row-error { background: rgba(255,107,107,.06); }
+.preview-table tbody tr.row-error:hover { background: rgba(255,107,107,.1); }
+.preview-table tbody tr.row-update { background: rgba(255,180,0,.05); }
+.preview-table tbody tr.row-update:hover { background: rgba(255,180,0,.09); }
+.preview-table tbody tr.row-skip { opacity: .45; text-decoration: line-through; }
+
+.status-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 12px;
+    font-size: 11.5px; font-weight: 500;
+}
+.status-chip.ok { background: rgba(111,207,151,.15); color: #7FE89A; }
+.status-chip.err { background: rgba(255,107,107,.15); color: #FF8FA8; }
+.status-chip.warn { background: rgba(255,180,0,.15); color: #FFCE6B; }
+.status-chip.skip { background: rgba(255,255,255,.1); color: var(--jb-text-faint); }
+
+.col-status { width: 72px; }
+.col-type { width: 96px; }
+.col-ans { width: 80px; }
+.col-opts { width: 240px; }
+.col-row { width: 50px; }
+.col-actions { width: 140px; }
+.col-edit-actions { width: 180px; }
+
+.table-inline-edit input, .table-inline-edit select {
+    font-size: 13px; padding: 3px 8px; border-radius: 6px;
+}
+.table-inline-edit .form-control, .table-inline-edit .form-select { min-width: 80px; }
+.table-inline-edit textarea { min-height: 44px; font-size: 13px; }
+
+.error-digest {
+    margin-top: 10px; padding: 10px 14px;
+    background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.2);
+    border-radius: 8px; color: #FF8FA8; font-size: 12.5px;
+    max-height: 120px; overflow-y: auto;
+}
+.error-digest div { margin: 2px 0; }
+
+.action-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px; margin-top: 18px;
+    background: var(--jb-panel); border: 1px solid var(--jb-border); border-radius: 12px;
+}
+.action-bar .ab-info { color: var(--jb-text-dim); font-size: 13px; }
+
+.result-card {
+    padding: 40px; text-align: center;
+    background: var(--jb-panel); border: 1px solid var(--jb-border); border-radius: 14px;
+}
+.result-card i { font-size: 56px; color: var(--jb-blue-hi); margin-bottom: 16px; }
+.result-card h4 { color: #fff; margin-bottom: 6px; }
+.result-card .rc-sub { color: var(--jb-text-dim); font-size: 13.5px; margin-bottom: 24px; }
+.result-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 480px; margin: 0 auto 24px;
+}
+.result-stats .rst {
+    padding: 16px; border-radius: 10px; background: var(--jb-panel-2); border: 1px solid var(--jb-border);
+}
+.result-stats .rst .v { font-family: "Space Grotesk", sans-serif; font-size: 26px; font-weight: 600; color: #fff; }
+.result-stats .rst .l { font-size: 11.5px; color: var(--jb-text-faint); margin-top: 4px; text-transform: uppercase; letter-spacing: .6px; }
+
+@media (max-width: 768px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .col-opts { display: none; }
+}
+</style>
+{/block}
+{block name="content"}
+<div class="import-wizard">
+    <!-- 顶部标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">试题库 Excel 导入</h4>
+        <a class="btn btn-outline-secondary btn-sm" href="/admin/Question/index"><i class="bi bi-arrow-left"></i> 返回列表</a>
+    </div>
+
+    <!-- 步骤条 -->
+    <div class="step-bar" id="stepBar">
+        <div class="step active" data-step="1"><span class="num">1</span> 选择文件</div>
+        <div class="connector" data-from="1" data-to="2"></div>
+        <div class="step" data-step="2"><span class="num">2</span> 预览 & 修改</div>
+        <div class="connector" data-from="2" data-to="3"></div>
+        <div class="step" data-step="3"><span class="num">3</span> 完成导入</div>
+    </div>
+
+    <!-- Step 1: 上传 -->
+    <div id="step1">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header"><strong>上传 Excel / CSV 文件</strong></div>
+                    <div class="card-body">
+                        <label class="dropzone" id="dropzone" for="fileInput">
+                            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+                            <i class="bi bi-cloud-arrow-up"></i>
+                            <div class="dz-title">点击选择文件，或拖拽到此处</div>
+                            <div class="dz-sub">支持 .xlsx / .xls / .csv 格式，单个文件不超过 5MB</div>
+                        </label>
+                        <div id="fileInfo" class="file-info d-none">
+                            <i class="bi bi-file-earmark-spreadsheet"></i>
+                            <div class="fi-main">
+                                <div class="fi-name" id="fiName"></div>
+                                <div class="fi-size" id="fiSize"></div>
+                            </div>
+                            <button type="button" class="btn-clear" id="fileClear" title="移除文件"><i class="bi bi-x-circle"></i></button>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> 开始导入</button>
-                </form>
-                <div id="importResult" class="mt-3"></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card template-card">
+                    <div class="card-header"><strong>导入模板说明</strong></div>
+                    <div class="card-body">
+                        <div class="mb-3" style="color:var(--jb-text-dim);font-size:13px;line-height:1.8">
+                            Excel 第 1 行为表头，数据从<strong>第 2 行</strong>开始。题型代码：
+                            <span class="badge" style="background:rgba(168,85,247,.2);color:var(--jb-blue-hi)">1</span>单选
+                            <span class="badge" style="background:rgba(168,85,247,.2);color:var(--jb-blue-hi)">2</span>多选
+                            <span class="badge" style="background:rgba(168,85,247,.2);color:var(--jb-blue-hi)">3</span>判断
+                            <span class="badge" style="background:rgba(168,85,247,.2);color:var(--jb-blue-hi)">4</span>填空
+                            <span class="badge" style="background:rgba(168,85,247,.2);color:var(--jb-blue-hi)">5</span>简答
+                        </div>
+                        <table class="table table-sm mb-3" style="margin-bottom:14px">
+                            <tr><th class="col-letter">列</th><th>含义</th></tr>
+                            <tr><td class="col-letter">A</td><td>题目内容</td></tr>
+                            <tr><td class="col-letter">B</td><td>题型（1-5）</td></tr>
+                            <tr><td class="col-letter">C~F</td><td>选项 A/B/C/D（判断、填空、简答可留空）</td></tr>
+                            <tr><td class="col-letter">G</td><td>正确答案（简答题可空）</td></tr>
+                            <tr><td class="col-letter">H</td><td>分值（默认 5）</td></tr>
+                            <tr><td class="col-letter">I</td><td>难度（1简单/2中等/3困难）</td></tr>
+                            <tr><td class="col-letter">J</td><td>分类（可选）</td></tr>
+                        </table>
+                        <a class="btn btn-outline-primary w-100" href="/admin/Question/template"><i class="bi bi-download"></i> 下载标准导入模板</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
+
+    <!-- Step 2: 预览 -->
+    <div id="step2" style="display:none">
         <div class="card">
-            <div class="card-header"><strong>模板说明</strong></div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>预览 & 修改</strong>
+                <span id="parseStat" class="text-muted small"></span>
+            </div>
             <div class="card-body">
-                <table class="table table-sm table-bordered">
-                    <tr><th>列</th><th>含义</th></tr>
-                    <tr><td>A</td><td>题目</td></tr>
-                    <tr><td>B</td><td>题型(1单选/2多选/3判断)</td></tr>
-                    <tr><td>C~F</td><td>选项A/B/C/D（判断可留空）</td></tr>
-                    <tr><td>G</td><td>正确答案（A/B/C/D）</td></tr>
-                    <tr><td>H</td><td>分值（默认5）</td></tr>
-                    <tr><td>I</td><td>难度（1简单/2中等/3困难）</td></tr>
-                    <tr><td>J</td><td>分类（可选）</td></tr>
-                </table>
-                <a class="btn btn-success" href="/admin/Question/template"><i class="bi bi-download"></i> 下载导入模板</a>
+                <!-- 统计条 -->
+                <div class="stats-row" id="statsRow"></div>
+
+                <!-- 顶部操作栏 -->
+                <div class="preview-bar">
+                    <div class="pb-filters">
+                        <span class="pb-tip">显示：</span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" data-filter="all">全部</button>
+                            <button type="button" class="btn btn-outline-secondary" data-filter="ok">正常</button>
+                            <button type="button" class="btn btn-outline-secondary" data-filter="err">有错误</button>
+                            <button type="button" class="btn btn-outline-secondary" data-filter="update">将更新</button>
+                            <button type="button" class="btn btn-outline-secondary" data-filter="skip">已跳过</button>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="expandAll"><i class="bi bi-arrows-expand"></i> 全部展开编辑</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="collapseAll"><i class="bi bi-arrows-collapse"></i> 全部折叠</button>
+                    </div>
+                </div>
+
+                <!-- 预览表 -->
+                <div class="preview-wrap">
+                    <table class="table preview-table mb-0" id="previewTable">
+                        <thead>
+                            <tr>
+                                <th class="col-row">行</th>
+                                <th class="col-status">状态</th>
+                                <th class="col-type">题型</th>
+                                <th>题目内容</th>
+                                <th class="col-opts">选项 / 答案</th>
+                                <th class="col-row">难度</th>
+                                <th class="col-row">分值</th>
+                                <th class="col-actions">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- 错误摘要 -->
+                <div id="errorDigest" class="error-digest d-none"></div>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button type="button" class="btn btn-outline-secondary" id="btnBackStep1"><i class="bi bi-arrow-left"></i> 重新选择文件</button>
+            <div class="ab-info" id="actionBarInfo">点击"确认导入"后，被跳过和有错误的行将不会写入数据库</div>
+            <button type="button" class="btn btn-primary" id="btnConfirmImport"><i class="bi bi-check2-circle"></i> 确认导入</button>
+        </div>
+    </div>
+
+    <!-- Step 3: 结果 -->
+    <div id="step3" style="display:none">
+        <div class="card">
+            <div class="card-body">
+                <div class="result-card">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <h4 id="resultTitle">导入完成</h4>
+                    <div class="rc-sub" id="resultMsg"></div>
+                    <div class="result-stats">
+                        <div class="rst"><div class="v" id="rstSuccess">-</div><div class="l">新增</div></div>
+                        <div class="rst"><div class="v" id="rstUpdate">-</div><div class="l">更新</div></div>
+                        <div class="rst"><div class="v" id="rstSkip">-</div><div class="l">跳过</div></div>
+                    </div>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a class="btn btn-outline-secondary" href="/admin/Question/index"><i class="bi bi-journal-text"></i> 去试题列表</a>
+                        <button type="button" class="btn btn-primary" id="btnImportAgain"><i class="bi bi-plus-lg"></i> 继续导入</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 {/block}
+
 {block name="js"}
 <script>
-document.getElementById('importForm').addEventListener('submit',function(e){
-    e.preventDefault();
-    var fd = new FormData(this);
-    fetch('/admin/Question/import',{method:'POST',body:fd})
-        .then(r=>r.json()).then(d=>{
-            showAlert(d.msg,d.code===1?'success':'danger');
-            if(d.data && d.data.errors){
-                var html = '<div class="mt-3"><strong>错误示例：</strong><ul class="small text-danger">';
-                d.data.errors.forEach(function(err){ html += '<li>'+err+'</li>'; });
-                html += '</ul></div>';
-                document.getElementById('importResult').innerHTML = html;
-            }
-            if(d.code===1) setTimeout(function(){location.reload();},1500);
+(function () {
+    var TYPE_MAP = {volist name="typeMap" id="v" key="k"}{$k}: "{$v}", {/volist};
+    var DIFF_MAP = {volist name="difficultyMap" id="v" key="k"}{$k}: "{$v}", {/volist};
+    var state = { step: 1, rows: [], total: 0, valid: 0 };
+    var typeMap = {1: '单选题', 2: '多选题', 3: '判断题', 4: '填空题', 5: '简答题'};
+    var diffMap = {1: '简单', 2: '中等', 3: '困难'};
+    var filterMode = 'all';
+
+    function updateStepBar() {
+        var step = state.step;
+        document.querySelectorAll('#stepBar .step').forEach(function (el) {
+            var n = parseInt(el.dataset.step, 10);
+            el.classList.toggle('active', n === step);
+            el.classList.toggle('done', n < step);
         });
-});
+        document.querySelectorAll('#stepBar .connector').forEach(function (el) {
+            var from = parseInt(el.dataset.from, 10);
+            var to = parseInt(el.dataset.to, 10);
+            el.classList.toggle('done', from < step && to <= step);
+        });
+        document.getElementById('step1').style.display = step === 1 ? '' : 'none';
+        document.getElementById('step2').style.display = step === 2 ? '' : 'none';
+        document.getElementById('step3').style.display = step === 3 ? '' : 'none';
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+
+    // ========== Step 1: 文件上传 ==========
+    var dz = document.getElementById('dropzone');
+    var input = document.getElementById('fileInput');
+    var fileInfo = document.getElementById('fileInfo');
+    var fiName = document.getElementById('fiName');
+    var fiSize = document.getElementById('fiSize');
+
+    dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', function () { dz.classList.remove('dragover'); });
+    dz.addEventListener('drop', function (e) {
+        e.preventDefault(); dz.classList.remove('dragover');
+        if (e.dataTransfer.files.length) { handleFile(e.dataTransfer.files[0]); }
+    });
+    input.addEventListener('change', function () {
+        if (input.files.length) handleFile(input.files[0]);
+    });
+    document.getElementById('fileClear').addEventListener('click', function (e) {
+        e.stopPropagation();
+        input.value = '';
+        fileInfo.classList.add('d-none');
+        dz.style.display = '';
+    });
+
+    function handleFile(file) {
+        if (file.size > 5 * 1024 * 1024) { showAlert('文件超过 5MB，请压缩后再试', 'danger'); return; }
+        var ext = file.name.toLowerCase();
+        if (!/\.(xlsx|xls|csv)$/.test(ext)) { showAlert('仅支持 .xlsx / .xls / .csv 格式', 'danger'); return; }
+
+        dz.style.display = 'none';
+        fiName.textContent = file.name;
+        fiSize.textContent = formatSize(file.size);
+        fileInfo.classList.remove('d-none');
+
+        var fd = new FormData(); fd.append('file', file);
+        fetch('/admin/Question/importPreview', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.code !== 1) {
+                    showAlert(d.msg || '解析失败', 'danger');
+                    dz.style.display = ''; fileInfo.classList.add('d-none'); input.value = '';
+                    return;
+                }
+                state.rows = d.data.rows || [];
+                state.total = d.data.total || 0;
+                state.valid = d.data.valid || 0;
+                // 初始化 skip 标记
+                state.rows.forEach(function (r) { r.skip = false; r.editing = false; });
+                renderStep2();
+                state.step = 2; updateStepBar();
+                showAlert('解析完成：共 ' + state.total + ' 行，' + state.valid + ' 行可直接导入', 'success');
+            })
+            .catch(function (err) {
+                showAlert('网络错误：' + err.message, 'danger');
+                dz.style.display = ''; fileInfo.classList.add('d-none'); input.value = '';
+            });
+    }
+
+    // ========== Step 2: 预览 & 编辑 ==========
+    function renderStep2() {
+        document.getElementById('parseStat').textContent = '文件已解析：共 ' + state.total + ' 行';
+
+        // 统计条
+        var ok = 0, err = 0, upd = 0, skip = 0;
+        state.rows.forEach(function (r) {
+            if (r.skip) skip++;
+            else if (!r.valid) err++;
+            else if (r.exists) upd++;
+            else ok++;
+        });
+        var stats = [
+            { cls: 'info', label: '可新增', val: ok },
+            { cls: 'warn', label: '将更新', val: upd },
+            { cls: 'err', label: '有错误', val: err },
+            { cls: '', label: '已跳过', val: skip },
+        ];
+        document.getElementById('statsRow').innerHTML = stats.map(function (s) {
+            return '<div class="stat-tile ' + s.cls + '"><div class="st-label">' + s.label + '</div><div class="st-value">' + s.val + '</div></div>';
+        }).join('');
+
+        // 错误摘要
+        var errList = state.rows.filter(function (r) { return !r.valid && !r.skip; });
+        var digest = document.getElementById('errorDigest');
+        if (errList.length) {
+            digest.classList.remove('d-none');
+            digest.innerHTML = errList.slice(0, 20).map(function (r) {
+                return '<div>第 ' + r.row_num + ' 行：' + (r.errors || []).join('；') + '</div>';
+            }).join('') + (errList.length > 20 ? '<div>…还有 ' + (errList.length - 20) + ' 行错误</div>' : '');
+        } else {
+            digest.classList.add('d-none');
+        }
+
+        renderTable();
+    }
+
+    function renderTable() {
+        var tbody = document.getElementById('previewBody');
+        var html = '';
+        state.rows.forEach(function (r, idx) {
+            if (!matchFilter(r)) return;
+            html += renderRow(r, idx);
+            if (r.editing) html += renderEditRow(r, idx);
+        });
+        tbody.innerHTML = html || '<tr><td colspan="8" class="text-center text-muted py-4">没有符合条件的行</td></tr>';
+        bindRowEvents();
+    }
+
+    function matchFilter(r) {
+        if (filterMode === 'all') return true;
+        if (filterMode === 'ok') return r.valid && !r.skip && !r.exists;
+        if (filterMode === 'err') return !r.valid && !r.skip;
+        if (filterMode === 'update') return r.exists && !r.skip;
+        if (filterMode === 'skip') return r.skip;
+        return true;
+    }
+
+    function rowClass(r) {
+        if (r.skip) return 'row-skip';
+        if (!r.valid) return 'row-error';
+        if (r.exists) return 'row-update';
+        return '';
+    }
+
+    function statusChip(r) {
+        if (r.skip) return '<span class="status-chip skip"><i class="bi bi-skip-forward"></i> 已跳过</span>';
+        if (!r.valid) return '<span class="status-chip err"><i class="bi bi-x-circle"></i> 错误</span>';
+        if (r.exists) return '<span class="status-chip warn"><i class="bi bi-arrow-repeat"></i> 更新</span>';
+        return '<span class="status-chip ok"><i class="bi bi-check-circle"></i> 新增</span>';
+    }
+
+    function renderRow(r, idx) {
+        var opts = '';
+        if (r.question_type === 3 || r.question_type === 5) {
+            opts = r.correct_answer || '<span class="text-muted small">（简答题可空）</span>';
+        } else {
+            var optMap = {option_a: 'A', option_b: 'B', option_c: 'C', option_d: 'D'};
+            Object.keys(optMap).forEach(function (k) {
+                if (r[k]) opts += '<span class="badge" style="background:rgba(255,255,255,.08);color:var(--jb-text-dim);margin-right:4px">' + optMap[k] + '. ' + r[k] + '</span>';
+            });
+            opts += '<div class="mt-1"><strong style="color:var(--jb-blue-hi)">答案：' + (r.correct_answer || '—') + '</strong></div>';
+        }
+        var errTip = r.errors && r.errors.length
+            ? '<div class="text-danger small mt-1"><i class="bi bi-info-circle"></i> ' + r.errors.join('；') + '</div>'
+            : '';
+        return '<tr class="' + rowClass(r) + '" data-idx="' + idx + '">'
+            + '<td class="text-muted small">' + r.row_num + '</td>'
+            + '<td>' + statusChip(r) + '</td>'
+            + '<td><span class="badge" style="background:rgba(168,85,247,.15);color:var(--jb-blue-hi)">' + (typeMap[r.question_type] || r.question_type) + '</span></td>'
+            + '<td style="max-width:280px">' + escapeHtml(r.title) + errTip + '</td>'
+            + '<td class="small">' + opts + '</td>'
+            + '<td class="text-center">' + (diffMap[r.difficulty] || r.difficulty) + '</td>'
+            + '<td class="text-center">' + r.score + '</td>'
+            + '<td>'
+            + '<button class="btn btn-sm btn-outline-secondary me-1 btn-edit-row"><i class="bi bi-pencil"></i></button>'
+            + (r.skip
+                ? '<button class="btn btn-sm btn-outline-secondary btn-unskip-row"><i class="bi bi-arrow-counterclockwise"></i></button>'
+                : '<button class="btn btn-sm btn-outline-danger btn-skip-row"><i class="bi bi-skip-forward"></i></button>')
+            + '</td>'
+            + '</tr>';
+    }
+
+    function renderEditRow(r, idx) {
+        return '<tr class="table-inline-edit" data-edit-idx="' + idx + '">'
+            + '<td colspan="8">'
+            + '<div class="p-3" style="background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed var(--jb-border)">'
+            + '<div class="row g-2">'
+            + '<div class="col-12">'
+            + '<label class="form-label small mb-1">题目内容</label>'
+            + '<textarea class="form-control edit-field" data-f="title" rows="2">' + escapeHtml(r.title) + '</textarea>'
+            + '</div>'
+            + '<div class="col-md-3">'
+            + '<label class="form-label small mb-1">题型</label>'
+            + '<select class="form-select edit-field" data-f="question_type">'
+            + Object.keys(typeMap).map(function (k) {
+                return '<option value="' + k + '" ' + (String(r.question_type) === String(k) ? 'selected' : '') + '>' + typeMap[k] + '</option>';
+            }).join('')
+            + '</select>'
+            + '</div>'
+            + '<div class="col-md-3">'
+            + '<label class="form-label small mb-1">难度</label>'
+            + '<select class="form-select edit-field" data-f="difficulty">'
+            + Object.keys(diffMap).map(function (k) {
+                return '<option value="' + k + '" ' + (String(r.difficulty) === String(k) ? 'selected' : '') + '>' + diffMap[k] + '</option>';
+            }).join('')
+            + '</select>'
+            + '</div>'
+            + '<div class="col-md-2">'
+            + '<label class="form-label small mb-1">分值</label>'
+            + '<input type="number" min="0" step="0.5" class="form-control edit-field" data-f="score" value="' + r.score + '">'
+            + '</div>'
+            + '<div class="col-md-4">'
+            + '<label class="form-label small mb-1">分类</label>'
+            + '<input type="text" class="form-control edit-field" data-f="category" value="' + escapeAttr(r.category) + '">'
+            + '</div>'
+            + [1,2,3,4].map(function (i) {
+                return '<div class="col-md-3 col-6">'
+                    + '<label class="form-label small mb-1">选项' + String.fromCharCode(64 + i) + '</label>'
+                    + '<input type="text" class="form-control edit-field" data-f="option_' + String.fromCharCode(96 + i) + '" value="' + escapeAttr(r['option_' + String.fromCharCode(96 + i)]) + '">'
+                    + '</div>';
+            }).join('')
+            + '<div class="col-md-4">'
+            + '<label class="form-label small mb-1">正确答案 ' + (r.question_type == 5 ? '<span class="text-muted">（简答题参考答案可空）</span>' : '') + '</label>'
+            + '<input type="text" class="form-control edit-field" data-f="correct_answer" value="' + escapeAttr(r.correct_answer) + '">'
+            + '</div>'
+            + '</div>'
+            + '<div class="mt-3 d-flex gap-2">'
+            + '<button class="btn btn-sm btn-primary btn-save-edit"><i class="bi bi-check2"></i> 保存修改</button>'
+            + '<button class="btn btn-sm btn-outline-secondary btn-cancel-edit">取消</button>'
+            + '</div>'
+            + '</div>'
+            + '</td>'
+            + '</tr>';
+    }
+
+    function escapeHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function escapeAttr(s) { return escapeHtml(s || ''); }
+
+    function bindRowEvents() {
+        document.querySelectorAll('.btn-edit-row').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var tr = btn.closest('tr');
+                var idx = parseInt(tr.dataset.idx, 10);
+                state.rows[idx].editing = true;
+                renderTable();
+            });
+        });
+        document.querySelectorAll('.btn-skip-row').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var tr = btn.closest('tr');
+                var idx = parseInt(tr.dataset.idx, 10);
+                state.rows[idx].skip = true;
+                state.rows[idx].editing = false;
+                renderStep2();
+            });
+        });
+        document.querySelectorAll('.btn-unskip-row').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var tr = btn.closest('tr');
+                var idx = parseInt(tr.dataset.idx, 10);
+                state.rows[idx].skip = false;
+                renderStep2();
+            });
+        });
+        document.querySelectorAll('.btn-save-edit').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var editTr = btn.closest('tr[data-edit-idx]');
+                var idx = parseInt(editTr.dataset.editIdx, 10);
+                var r = state.rows[idx];
+                editTr.querySelectorAll('.edit-field').forEach(function (el) {
+                    var f = el.dataset.f;
+                    var v = el.value;
+                    if (f === 'question_type' || f === 'difficulty') v = parseInt(v, 10);
+                    if (f === 'score') v = parseFloat(v) || 0;
+                    r[f] = v;
+                });
+                validateRow(r);
+                r.editing = false;
+                renderStep2();
+            });
+        });
+        document.querySelectorAll('.btn-cancel-edit').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var editTr = btn.closest('tr[data-edit-idx]');
+                var idx = parseInt(editTr.dataset.editIdx, 10);
+                state.rows[idx].editing = false;
+                renderTable();
+            });
+        });
+    }
+
+    function validateRow(r) {
+        var errors = [];
+        if (!r.title || !String(r.title).trim()) errors.push('题目不能为空');
+        if (r.question_type !== 5 && (!r.correct_answer || !String(r.correct_answer).trim())) errors.push('答案不能为空');
+        if (r.question_type === 3 && r.correct_answer && !/^[AB]$/.test(String(r.correct_answer).toUpperCase())) errors.push('判断题答案应为 A 或 B');
+        if (r.question_type === 1 && r.correct_answer && !/^[A-D]$/.test(String(r.correct_answer).toUpperCase())) errors.push('单选题答案应为 A/B/C/D');
+        if (r.question_type === 2 && r.correct_answer && !/^[A-D]+$/.test(String(r.correct_answer).toUpperCase())) errors.push('多选题答案应由 A-D 字母组成');
+        r.valid = errors.length === 0;
+        r.errors = errors;
+        r.correct_answer = r.question_type === 5 ? (r.correct_answer || '') : String(r.correct_answer || '').toUpperCase();
+    }
+
+    // 过滤器按钮
+    document.querySelectorAll('.preview-bar [data-filter]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.preview-bar [data-filter]').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            filterMode = btn.dataset.filter;
+            renderTable();
+        });
+    });
+
+    document.getElementById('expandAll').addEventListener('click', function () {
+        state.rows.forEach(function (r) { r.editing = !r.skip; });
+        renderTable();
+    });
+    document.getElementById('collapseAll').addEventListener('click', function () {
+        state.rows.forEach(function (r) { r.editing = false; });
+        renderTable();
+    });
+
+    document.getElementById('btnBackStep1').addEventListener('click', function () {
+        state.step = 1; updateStepBar();
+    });
+
+    // 确认导入
+    document.getElementById('btnConfirmImport').addEventListener('click', async function () {
+        var toImport = state.rows.filter(function (r) { return !r.skip; });
+        var errCount = toImport.filter(function (r) { return !r.valid; }).length;
+        if (!toImport.length) { showAlert('没有可导入的行', 'warning'); return; }
+
+        if (errCount > 0) {
+            var ok = await confirmAction('有 ' + errCount + ' 行数据存在错误，确认要跳过它们继续导入其余行吗？', {
+                danger: true, okText: '继续导入', title: '仍有错误行'
+            });
+            if (!ok) return;
+        }
+
+        var btn = this; btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 正在导入…';
+
+        var validRows = toImport.filter(function (r) { return r.valid; });
+        // 前端把 skip=true 传给后端
+        var payload = state.rows.map(function (r) {
+            return {
+                title: r.title, question_type: r.question_type,
+                option_a: r.option_a, option_b: r.option_b, option_c: r.option_c, option_d: r.option_d,
+                correct_answer: r.correct_answer, score: r.score, difficulty: r.difficulty, category: r.category,
+                exists_id: r.exists_id || 0, skip: r.skip,
+            };
+        });
+
+        fetch('/admin/Question/confirmImport', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows: payload }),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle"></i> 确认导入';
+            if (d.code !== 1) { showAlert(d.msg || '导入失败', 'danger'); return; }
+            var data = d.data || {};
+            document.getElementById('resultTitle').textContent = data.fail > 0 ? '导入完成' : '导入完成';
+            document.getElementById('resultMsg').textContent = d.msg || '';
+            document.getElementById('rstSuccess').textContent = data.success || 0;
+            document.getElementById('rstUpdate').textContent = data.updated || 0;
+            document.getElementById('rstSkip').textContent = data.fail || 0;
+            state.step = 3; updateStepBar();
+            showAlert('导入完成', 'success');
+        })
+        .catch(function (err) {
+            btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-circle"></i> 确认导入';
+            showAlert('网络错误：' + err.message, 'danger');
+        });
+    });
+
+    document.getElementById('btnImportAgain').addEventListener('click', function () {
+        // 重置全部状态
+        state = { step: 1, rows: [], total: 0, valid: 0 };
+        filterMode = 'all';
+        document.querySelectorAll('.preview-bar [data-filter]').forEach(function (b) {
+            b.classList.toggle('active', b.dataset.filter === 'all');
+        });
+        input.value = '';
+        fileInfo.classList.add('d-none');
+        dz.style.display = '';
+        updateStepBar();
+    });
+
+    updateStepBar();
+})();
 </script>
 {/block}

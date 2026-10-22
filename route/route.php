@@ -88,6 +88,8 @@ Route::group('admin', function () {
     Route::rule('question/edit', 'admin.Question/edit');
     Route::rule('question/save', 'admin.Question/save');
     Route::rule('question/delete', 'admin.Question/delete');
+    Route::rule('question/importPreview', 'admin.Question/importPreview');
+    Route::rule('question/confirmImport', 'admin.Question/confirmImport');
     Route::rule('question/import', 'admin.Question/import');
     Route::rule('question/template', 'admin.Question/template');
     Route::rule('question', 'admin.Question/index');

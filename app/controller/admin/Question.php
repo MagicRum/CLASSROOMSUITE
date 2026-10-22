@@ -108,86 +108,214 @@ class Question extends Base
     }
 
     /**
-     * Excel 导入试题库
-     * 列：题目 | 题型(1单选/2多选/3判断) | 选项A | 选项B | 选项C | 选项D | 正确答案 | 分值 | 难度(1简单/2中等/3困难) | 分类
+     * Excel 导入试题库首页（GET 渲染向导首页）
      */
     public function import()
     {
-        if (request()->isPost()) {
-            $file = request()->file('file');
-            if (!$file) return $this->error('请选择上传文件');
+        return view('admin/question/import', [
+            'typeMap'     => QuestionModel::$typeMap,
+            'difficultyMap' => QuestionModel::$difficultyMap,
+        ]);
+    }
 
-            try {
-                $spreadsheet = IOFactory::load($file->getPathname());
-                $worksheet = $spreadsheet->getActiveSheet();
-                $highestRow = $worksheet->getHighestRow();
+    /**
+     * 预览：解析 Excel，返回每行校验结果，不入库
+     */
+    public function importPreview()
+    {
+        if (!request()->isPost()) {
+            return json(['code' => 0, 'msg' => '请求方式错误']);
+        }
+        $file = request()->file('file');
+        if (!$file) return json(['code' => 0, 'msg' => '请选择上传文件']);
 
-                $success = 0;
-                $fail = 0;
-                $errors = [];
+        try {
+            $spreadsheet = IOFactory::load($file->getPathname());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $highestRow = $worksheet->getHighestRow();
 
-                for ($row = 2; $row <= $highestRow; $row++) {
-                    $title = trim((string) $worksheet->getCell("A{$row}")->getValue());
-                    $qType = intval($worksheet->getCell("B{$row}")->getValue() ?? 1);
-                    $optA = trim((string) $worksheet->getCell("C{$row}")->getValue());
-                    $optB = trim((string) $worksheet->getCell("D{$row}")->getValue());
-                    $optC = trim((string) $worksheet->getCell("E{$row}")->getValue());
-                    $optD = trim((string) $worksheet->getCell("F{$row}")->getValue());
-                    $answer = trim(strtoupper((string) $worksheet->getCell("G{$row}")->getValue()));
-                    $score = floatval($worksheet->getCell("H{$row}")->getValue() ?? 5);
-                    $diff = intval($worksheet->getCell("I{$row}")->getValue() ?? 2);
-                    $category = trim((string) $worksheet->getCell("J{$row}")->getValue());
+            $rows = [];
+            for ($row = 2; $row <= $highestRow; $row++) {
+                $title    = trim((string) $worksheet->getCell("A{$row}")->getValue());
+                $qType    = intval($worksheet->getCell("B{$row}")->getValue() ?? 1);
+                $optA     = trim((string) $worksheet->getCell("C{$row}")->getValue());
+                $optB     = trim((string) $worksheet->getCell("D{$row}")->getValue());
+                $optC     = trim((string) $worksheet->getCell("E{$row}")->getValue());
+                $optD     = trim((string) $worksheet->getCell("F{$row}")->getValue());
+                $answer   = trim((string) $worksheet->getCell("G{$row}")->getValue());
+                $score    = $worksheet->getCell("H{$row}")->getValue();
+                $diff     = intval($worksheet->getCell("I{$row}")->getValue() ?? 2);
+                $category = trim((string) $worksheet->getCell("J{$row}")->getValue());
 
-                    // 题型容错（5=简答题）
-                    if (!in_array($qType, [1, 2, 3, 4, 5])) $qType = 1;
-
-                    // 简答题参考答案可为空
-                    if (!$title || ($qType != 5 && !$answer)) {
-                        $fail++;
-                        $errors[] = "第{$row}行：题目或答案为空";
-                        continue;
-                    }
-
-                    // 查重：同题目标题不重复
-                    $exists = QuestionModel::where('title', $title)->find();
-                    if ($exists) {
-                        $exists->save([
-                            'question_type'  => $qType,
-                            'option_a'       => $optA,
-                            'option_b'       => $optB,
-                            'option_c'       => $optC,
-                            'option_d'       => $optD,
-                            'correct_answer' => $answer,
-                            'score'          => $score,
-                            'difficulty'     => $diff,
-                            'category'       => $category,
-                        ]);
-                    } else {
-                        QuestionModel::create([
-                            'title'           => $title,
-                            'question_type'   => $qType,
-                            'option_a'        => $optA,
-                            'option_b'        => $optB,
-                            'option_c'        => $optC,
-                            'option_d'        => $optD,
-                            'correct_answer'  => $answer,
-                            'score'           => $score,
-                            'difficulty'      => $diff,
-                            'category'        => $category,
-                        ]);
-                    }
-                    $success++;
+                // 空行跳过（整行全空视为结束）
+                if ($title === '' && $optA === '' && $optB === '' && $answer === '') {
+                    continue;
                 }
 
-                return $this->success("导入完成：成功{$success}条，失败{$fail}条", [
-                    'errors' => array_slice($errors, 0, 10),
-                ]);
+                // 题型容错
+                if (!in_array($qType, [1, 2, 3, 4, 5], true)) {
+                    $qType = 1;
+                }
+                // 分值容错
+                if ($score === null || $score === '' || !is_numeric($score)) {
+                    $score = 5;
+                }
+                $score = floatval($score);
+                if ($score <= 0) $score = 5;
+                // 难度容错
+                if (!in_array($diff, [1, 2, 3], true)) $diff = 2;
+
+                // 校验
+                $errors = [];
+                if ($title === '') {
+                    $errors[] = '题目内容不能为空';
+                }
+                $answerNorm = $qType == 5 ? $answer : strtoupper($answer);
+                // 简答题参考答案可为空
+                if ($qType != 5 && $answerNorm === '') {
+                    $errors[] = '正确答案不能为空';
+                }
+                // 判断题答案应为 A 或 B（A=正确，B=错误）
+                if ($qType == 3 && $answerNorm !== '' && !in_array($answerNorm, ['A', 'B'], true)) {
+                    $errors[] = '判断题答案应为 A 或 B（A=正确，B=错误）';
+                }
+                // 单选答案必须在 A-D 之间
+                if ($qType == 1 && $answerNorm !== '' && !preg_match('/^[A-D]$/', $answerNorm)) {
+                    $errors[] = '单选题答案应为 A/B/C/D 中的一项';
+                }
+                // 多选答案必须由 A-D 中的字母组成
+                if ($qType == 2 && $answerNorm !== '' && !preg_match('/^[A-D]+$/', $answerNorm)) {
+                    $errors[] = '多选题答案应由 A-D 中字母组合而成';
+                }
+
+                $rows[] = [
+                    'row_num'        => $row,
+                    'title'          => $title,
+                    'question_type'  => $qType,
+                    'option_a'       => $optA,
+                    'option_b'       => $optB,
+                    'option_c'       => $optC,
+                    'option_d'       => $optD,
+                    'correct_answer' => $answerNorm,
+                    'score'          => $score,
+                    'difficulty'     => $diff,
+                    'category'       => $category,
+                    'valid'          => empty($errors),
+                    'errors'         => $errors,
+                ];
+            }
+
+            $total = count($rows);
+            $valid = 0;
+            foreach ($rows as $r) {
+                if ($r['valid']) $valid++;
+            }
+            $existsTitles = [];
+            if ($valid > 0) {
+                $titles = array_values(array_unique(array_column($rows, 'title')));
+                if ($titles) {
+                    $hits = QuestionModel::whereIn('title', $titles)->column('id', 'title');
+                    $existsTitles = $hits;
+                }
+            }
+            foreach ($rows as $idx => $r) {
+                if (isset($existsTitles[$r['title']])) {
+                    $rows[$idx]['exists_id'] = intval($existsTitles[$r['title']]);
+                    $rows[$idx]['exists'] = true;
+                } else {
+                    $rows[$idx]['exists'] = false;
+                }
+            }
+
+            return json([
+                'code' => 1,
+                'msg'  => '解析完成',
+                'data' => [
+                    'rows'  => $rows,
+                    'total' => $total,
+                    'valid' => $valid,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 0, 'msg' => '文件解析失败：' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 确认导入：接收前端编辑后的 JSON 数组，执行 upsert
+     */
+    public function confirmImport()
+    {
+        if (!request()->isPost()) {
+            return json(['code' => 0, 'msg' => '请求方式错误']);
+        }
+        $raw = file_get_contents('php://input');
+        $data = json_decode($raw, true);
+        if (!is_array($data) || empty($data['rows'])) {
+            return json(['code' => 0, 'msg' => '未收到待导入数据']);
+        }
+        $rows = $data['rows'];
+        $success = 0;
+        $updated = 0;
+        $fail = 0;
+
+        foreach ($rows as $r) {
+            // 前端可传 skip=1 让某行被跳过
+            if (!empty($r['skip'])) continue;
+
+            $title = isset($r['title']) ? trim((string) $r['title']) : '';
+            if ($title === '') {
+                $fail++;
+                continue;
+            }
+            $qType = isset($r['question_type']) ? intval($r['question_type']) : 1;
+            if (!in_array($qType, [1, 2, 3, 4, 5], true)) $qType = 1;
+
+            $answerRaw = isset($r['correct_answer']) ? trim((string) $r['correct_answer']) : '';
+            $answer = $qType == 5 ? $answerRaw : strtoupper($answerRaw);
+            $score = isset($r['score']) && is_numeric($r['score']) ? floatval($r['score']) : 5;
+            if ($score <= 0) $score = 5;
+            $diff = isset($r['difficulty']) ? intval($r['difficulty']) : 2;
+            if (!in_array($diff, [1, 2, 3], true)) $diff = 2;
+
+            $payload = [
+                'title'           => $title,
+                'question_type'   => $qType,
+                'option_a'        => trim((string) ($r['option_a'] ?? '')),
+                'option_b'        => trim((string) ($r['option_b'] ?? '')),
+                'option_c'        => trim((string) ($r['option_c'] ?? '')),
+                'option_d'        => trim((string) ($r['option_d'] ?? '')),
+                'correct_answer'  => $answer,
+                'score'           => $score,
+                'difficulty'      => $diff,
+                'category'        => trim((string) ($r['category'] ?? '')),
+            ];
+
+            try {
+                $existsId = isset($r['exists_id']) && intval($r['exists_id']) > 0
+                    ? intval($r['exists_id'])
+                    : QuestionModel::where('title', $title)->value('id');
+                if ($existsId) {
+                    QuestionModel::where('id', $existsId)->update($payload);
+                    $updated++;
+                } else {
+                    QuestionModel::create($payload);
+                    $success++;
+                }
             } catch (\Exception $e) {
-                return $this->error('文件解析失败：' . $e->getMessage());
+                $fail++;
             }
         }
 
-        return view('admin/question/import');
+        return json([
+            'code' => 1,
+            'msg'  => "导入完成：新增{$success}条，更新{$updated}条，跳过{$fail}条",
+            'data' => [
+                'success' => $success,
+                'updated' => $updated,
+                'fail'    => $fail,
+            ],
+        ]);
     }
 
     /**
