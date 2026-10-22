@@ -496,3 +496,129 @@ html[data-theme="light"] .alert-info { color: #6D28D9 !important; }
 .ui-toast.warning > i { color: var(--jb-text-dim); }
 .ui-toast.danger { border-left-color: var(--jb-danger-solid); }
 .ui-toast.danger > i { color: var(--jb-danger); }
+
+/* =========================================================
+   亮色主题：试题预览弹窗（.qs-detail）
+   暗色下已用 CSS 变量，亮色需要显式覆盖半透明色块
+   ========================================================= */
+html[data-theme="light"] .qs-detail-mask {
+    background: rgba(17, 17, 20, .48) !important;
+}
+html[data-theme="light"] .qs-detail {
+    background: #FFFFFF !important;
+    border-color: rgba(17, 17, 20, .12) !important;
+    box-shadow: 0 28px 70px rgba(17, 17, 20, .22) !important;
+}
+html[data-theme="light"] .qs-detail-title {
+    color: var(--jb-text) !important;
+}
+html[data-theme="light"] .qs-detail-header {
+    border-bottom-color: var(--jb-border) !important;
+}
+html[data-theme="light"] .qs-q-block {
+    background: rgba(124, 58, 237, .06) !important;
+    border-color: rgba(124, 58, 237, .28) !important;
+}
+html[data-theme="light"] .qs-q-block .q-label {
+    color: var(--jb-blue) !important;
+}
+html[data-theme="light"] .qs-q-block .q-body {
+    color: var(--jb-text) !important;
+}
+html[data-theme="light"] .qs-option {
+    background: #FFFFFF !important;
+    border-color: #D6D6DE !important;
+}
+html[data-theme="light"] .qs-option.is-answer {
+    background: rgba(34, 160, 80, .10) !important;
+    border-color: rgba(34, 160, 80, .45) !important;
+}
+html[data-theme="light"] .qs-option.is-answer .qol-letter {
+    background: #1B7A44 !important;
+    color: #FFFFFF !important;
+}
+html[data-theme="light"] .qs-option .qol-letter {
+    background: rgba(124, 58, 237, .12) !important;
+    color: var(--jb-blue) !important;
+}
+html[data-theme="light"] .qs-option .qol-text {
+    color: var(--jb-text) !important;
+}
+html[data-theme="light"] .qs-ans-block {
+    background: rgba(124, 58, 237, .06) !important;
+    border-color: rgba(124, 58, 237, .30) !important;
+    color: var(--jb-blue) !important;
+}
+html[data-theme="light"] .qs-ans-block .ans-label {
+    color: var(--jb-blue) !important;
+}
+html[data-theme="light"] .qs-fill-block {
+    background: rgba(124, 58, 237, .06) !important;
+    border-color: rgba(124, 58, 237, .32) !important;
+}
+html[data-theme="light"] .qs-fill-block .fill-text {
+    color: var(--jb-text) !important;
+}
+html[data-theme="light"] .qs-fill-block .fill-text u {
+    color: var(--jb-text) !important;
+}
+html[data-theme="light"] .qs-essay-block {
+    background: rgba(219, 39, 119, .06) !important;
+    border-color: rgba(219, 39, 119, .30) !important;
+}
+html[data-theme="light"] .qs-essay-block .essay-label {
+    color: #BE185D !important;
+}
+html[data-theme="light"] .qs-essay-block .essay-hint {
+    color: var(--jb-text-dim) !important;
+}
+
+/* 亮色：题列表卡片行 */
+html[data-theme="light"] .qs-card {
+    background: #FFFFFF !important;
+    border-color: var(--jb-border) !important;
+}
+html[data-theme="light"] .qs-table-header {
+    background: #F4F4F7 !important;
+    border-bottom-color: var(--jb-border) !important;
+    color: var(--jb-text-faint) !important;
+}
+html[data-theme="light"] .qs-table-row {
+    color: var(--jb-text) !important;
+    border-bottom-color: var(--jb-border) !important;
+}
+html[data-theme="light"] .qs-table-row:hover {
+    background: rgba(124, 58, 237, .05) !important;
+}
+html[data-theme="light"] .qs-col-title {
+    color: var(--jb-text) !important;
+}
+html[data-theme="light"] .qs-col-seq {
+    color: var(--jb-text-faint) !important;
+}
+html[data-theme="light"] .qs-col-cat {
+    color: var(--jb-text-dim) !important;
+}
+html[data-theme="light"] .qs-col-score {
+    color: var(--jb-text) !important;
+}
+html[data-theme="light"] .qs-badge.type-1 { background: rgba(124,58,237,.12); color: #6D28D9; }
+html[data-theme="light"] .qs-badge.type-2 { background: rgba(79,70,229,.12); color: #4338CA; }
+html[data-theme="light"] .qs-badge.type-3 { background: rgba(5,150,105,.12); color: #047857; }
+html[data-theme="light"] .qs-badge.type-4 { background: rgba(217,119,6,.14); color: #B45309; }
+html[data-theme="light"] .qs-badge.type-5 { background: rgba(219,39,119,.12); color: #BE185D; }
+html[data-theme="light"] .qs-badge.diff-1 { background: rgba(124,58,237,.12); color: #6D28D9; }
+html[data-theme="light"] .qs-badge.diff-2 { background: rgba(5,150,105,.12); color: #047857; }
+html[data-theme="light"] .qs-badge.diff-3 { background: rgba(217,50,38,.12); color: #B91C1C; }
+
+/* 亮色：筛选区与工具栏 */
+html[data-theme="light"] .qs-toolbar h4 { color: var(--jb-text) !important; }
+html[data-theme="light"] .qs-filter {
+    background: #FFFFFF !important;
+    border-color: var(--jb-border) !important;
+}
+html[data-theme="light"] .qs-footer {
+    background: #FFFFFF !important;
+    border-top-color: var(--jb-border) !important;
+    color: var(--jb-text-dim) !important;
+}
